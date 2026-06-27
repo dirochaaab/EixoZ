@@ -313,8 +313,9 @@
     display:flex; flex-direction:column;
   }
   .product-card .photo,
-  .product-card .photo-placeholder{
-    width:100%; aspect-ratio:1/1; display:block; object-fit:cover;
+  .product-card .photo-placeholder,
+  .product-card video.photo{
+    width:100%; aspect-ratio:1/1; display:block; object-fit:cover; background:#000;
   }
   .product-card .photo-placeholder{
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
@@ -328,6 +329,9 @@
     font-weight:800; font-size:15px;
     background:var(--gradient); -webkit-background-clip:text; background-clip:text; color:transparent;
   }
+  .variations-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .variation-thumb{ width:32px; height:32px; border-radius:8px; object-fit:cover; border:1px solid var(--border); }
+  .variation-chip{ font-size:11px; padding:4px 8px; border-radius:8px; background:rgba(255,255,255,.06); color:var(--muted); }
   .product-card .cta-wrap{ position:relative; margin-top:auto; }
   .product-card .cta{
     width:100%; justify-content:center;
@@ -335,6 +339,16 @@
     box-shadow:0 0 14px -4px rgba(0,229,255,.4), 0 0 18px -6px rgba(255,45,149,.35);
   }
   .product-card .cta svg{ width:16px; height:16px; }
+  .field input[type="file"]{
+    width:100%; padding:8px 0; background:none; border:none; color:var(--ink); font-size:13px;
+  }
+  .variation-row{ display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
+  .variation-row .field{ flex:1; margin-bottom:0; }
+  .variation-row button{
+    background:none; border:1px solid var(--border); border-radius:10px; color:var(--pink);
+    width:36px; height:38px; cursor:pointer; font-size:16px; flex-shrink:0;
+  }
+  .admin-thumb{ width:100%; max-height:120px; object-fit:cover; border-radius:10px; margin-bottom:6px; display:block; }
 
   /* ---------- admin / login ---------- */
   .admin-toggle-link{
@@ -578,14 +592,47 @@
     bannerImages: [null, null, null, null, null]
   };
   var PRODUCTS = [
-    { id: null, name: 'Vaso Hexagonal', price: 'R$ 39,90', photo: null },
-    { id: null, name: 'Suporte de Celular', price: 'R$ 24,90', photo: null },
-    { id: null, name: 'Porta-canetas Geométrico', price: 'R$ 29,90', photo: null }
+    { id: null, name: 'Vaso Hexagonal', price: 'R$ 39,90', photo: null, variations: [] },
+    { id: null, name: 'Suporte de Celular', price: 'R$ 24,90', photo: null, variations: [] },
+    { id: null, name: 'Porta-canetas Geométrico', price: 'R$ 29,90', photo: null, variations: [] }
   ];
 
   function waLink (number, productName) {
     var msg = encodeURIComponent('Oi! Quero pedir' + (productName ? ': ' + productName : ''));
     return 'https://wa.me/' + number + '?text=' + msg;
+  }
+
+  // ---------------- fotos: validação + compressão (sem Storage, 100% Firestore) ----------------
+  var RAW_MAX_MB = 15;          // tamanho máx do arquivo original antes de comprimir
+  var DOC_SAFE_LIMIT = 900000;  // bytes — folga abaixo do limite de 1MB por documento do Firestore
+
+  function fileError (file) {
+    if (!file) return null;
+    if (file.type.indexOf('image/') !== 0) return 'Envie uma imagem (foto), não vídeo.';
+    if (file.size > RAW_MAX_MB * 1024 * 1024) return 'Foto muito grande (máx ' + RAW_MAX_MB + 'MB antes de comprimir).';
+    return null;
+  }
+
+  function compressImage (file, maxWidth, quality) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+          var scale = Math.min(1, maxWidth / img.width);
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = function () { reject(new Error('Não foi possível ler a imagem.')); };
+        img.src = e.target.result;
+      };
+      reader.onerror = function () { reject(new Error('Não foi possível ler o arquivo.')); };
+      reader.readAsDataURL(file);
+    });
   }
 
   // ---------------- banner (5 imagens) ----------------
@@ -631,19 +678,28 @@
     startBannerAuto();
   });
 
-  // ---------------- produtos ----------------
+  // ---------------- produtos (vitrine pública) ----------------
   function renderProducts () {
     var grid = document.getElementById('productsGrid');
     grid.innerHTML = PRODUCTS.map(function (p, i) {
-      var photoHtml = p.photo
+      var mediaHtml = p.photo
         ? '<img class="photo" src="' + p.photo + '" alt="' + p.name + '">'
         : '<div class="photo-placeholder">' + CAMERA_ICON + '<span>Foto do produto</span></div>';
+      var variationsHtml = '';
+      if (p.variations && p.variations.length) {
+        variationsHtml = '<div class="variations-row">' + p.variations.map(function (v) {
+          return v.photo
+            ? '<img class="variation-thumb" src="' + v.photo + '" title="' + (v.label || '') + '" alt="' + (v.label || '') + '">'
+            : '<span class="variation-chip">' + (v.label || '') + '</span>';
+        }).join('') + '</div>';
+      }
       return (
         '<div class="product-card">' +
-          photoHtml +
+          mediaHtml +
           '<div class="info">' +
             '<h3>' + p.name + '</h3>' +
             '<span class="price">' + p.price + '</span>' +
+            variationsHtml +
             '<div class="cta-wrap">' +
               '<button class="cta" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="prodMenu' + i + '">' +
                 WA_ICON + 'Pedir no WhatsApp' +
@@ -683,7 +739,13 @@
       if (!snap.empty) {
         PRODUCTS = snap.docs.map(function (d) {
           var v = d.data();
-          return { id: d.id, name: v.name || '', price: v.price || '', photo: v.photo || null };
+          return {
+            id: d.id,
+            name: v.name || '',
+            price: v.price || '',
+            photo: v.photo || null,
+            variations: Array.isArray(v.variations) ? v.variations : []
+          };
         });
       }
     } catch (e) { console.warn('Produtos do Firestore indisponíveis, usando exemplos.', e); }
@@ -731,8 +793,9 @@
   var adminToggle = document.getElementById('adminToggle');
   var modalOverlay = document.getElementById('modalOverlay');
   var modalBody = document.getElementById('modalBody');
+  var pendingVariations = []; // [{ label, file }] -- variações sendo montadas no formulário
 
-  function closeModal () { modalOverlay.hidden = true; modalBody.innerHTML = ''; }
+  function closeModal () { modalOverlay.hidden = true; modalBody.innerHTML = ''; pendingVariations = []; }
 
   function renderLoginForm () {
     modalBody.innerHTML =
@@ -755,11 +818,51 @@
     });
   }
 
+  function renderVariationsList () {
+    var wrap = document.getElementById('variationsList');
+    if (!wrap) return;
+    wrap.innerHTML = pendingVariations.map(function (v, i) {
+      return (
+        '<div class="variation-row">' +
+          '<div class="field"><label>Variação/modelo ' + (i + 1) + '</label>' +
+            '<input type="text" class="var-label" data-i="' + i + '" placeholder="Ex: Azul, Tamanho M" value="' + (v.label || '').replace(/"/g, '&quot;') + '">' +
+          '</div>' +
+          '<div class="field"><label>Foto</label><input type="file" accept="image/*" class="var-file" data-i="' + i + '"></div>' +
+          '<button type="button" data-rmvar="' + i + '" title="Remover">×</button>' +
+        '</div>'
+      );
+    }).join('');
+    wrap.querySelectorAll('.var-label').forEach(function (inp) {
+      inp.addEventListener('input', function () { pendingVariations[parseInt(inp.dataset.i, 10)].label = inp.value; });
+    });
+    wrap.querySelectorAll('.var-file').forEach(function (inp) {
+      inp.addEventListener('change', function () { pendingVariations[parseInt(inp.dataset.i, 10)].file = inp.files[0] || null; });
+    });
+    wrap.querySelectorAll('[data-rmvar]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        pendingVariations.splice(parseInt(btn.getAttribute('data-rmvar'), 10), 1);
+        renderVariationsList();
+      });
+    });
+  }
+
   function renderAdminPanel () {
+    pendingVariations = [];
+
     var productsHtml = PRODUCTS.map(function (p, i) {
       return '<div class="admin-product-row"><span>' + p.name + ' — ' + p.price + '</span>' +
         '<button type="button" class="danger" data-del="' + i + '">Excluir</button></div>';
     }).join('') || '<p style="color:var(--muted);font-size:13px;">Nenhum produto ainda.</p>';
+
+    var bannerHtml = SITE_CONFIG.bannerImages.map(function (src, i) {
+      return (
+        '<div class="field">' +
+          '<label>Imagem ' + (i + 1) + '</label>' +
+          (src ? '<img class="admin-thumb" src="' + src + '" alt="">' : '') +
+          '<input type="file" accept="image/*" class="banner-file" data-i="' + i + '">' +
+        '</div>'
+      );
+    }).join('');
 
     modalBody.innerHTML =
       '<h2>Painel EIXOZ</h2>' +
@@ -769,9 +872,16 @@
       productsHtml +
       '<div class="field" style="margin-top:14px;"><label>Nome do produto</label><input id="pName" placeholder="Ex: Vaso Hexagonal"></div>' +
       '<div class="field"><label>Preço</label><input id="pPrice" placeholder="Ex: R$ 39,90"></div>' +
-      '<div class="field"><label>URL da foto (opcional)</label><input id="pPhoto" placeholder="https://..."></div>' +
+      '<div class="field"><label>Foto principal (do celular)</label><input type="file" id="pMediaFile" accept="image/*"></div>' +
+      '<div id="variationsList"></div>' +
+      '<button type="button" class="btn-secondary" id="addVariation" style="width:100%;margin:4px 0 14px;">+ Adicionar variação/modelo</button>' +
       '<p class="error-msg" id="prodError"></p>' +
-      '<button class="btn-primary" id="pAdd" type="button" style="width:100%;margin-bottom:24px;">+ Adicionar produto</button>' +
+      '<button class="btn-primary" id="pAdd" type="button" style="width:100%;margin-bottom:28px;">+ Adicionar produto</button>' +
+
+      '<h3>Banner (5 imagens)</h3>' +
+      bannerHtml +
+      '<p class="error-msg" id="bannerError"></p>' +
+      '<button class="btn-primary" id="bannerSave" type="button" style="width:100%;margin-bottom:28px;">Salvar banner</button>' +
 
       '<h3>Links</h3>' +
       '<div class="field"><label>Instagram (URL)</label><input id="cfgInsta" value="' + SITE_CONFIG.instagramUrl + '"></div>' +
@@ -785,24 +895,13 @@
         '<button class="btn-secondary" id="logoutBtn" type="button">Sair</button>' +
       '</div>';
 
+    renderVariationsList();
+
     document.getElementById('modalClose').addEventListener('click', closeModal);
     document.getElementById('logoutBtn').addEventListener('click', function () { signOut(auth); });
-
-    document.getElementById('pAdd').addEventListener('click', async function () {
-      var name = document.getElementById('pName').value.trim();
-      var price = document.getElementById('pPrice').value.trim();
-      var photo = document.getElementById('pPhoto').value.trim() || null;
-      if (!name || !price) {
-        document.getElementById('prodError').textContent = 'Preencha nome e preço.';
-        return;
-      }
-      try {
-        await addDoc(collection(db, 'products'), { name: name, price: price, photo: photo });
-        await loadSiteData();
-        renderAdminPanel();
-      } catch (e) {
-        document.getElementById('prodError').textContent = 'Erro ao salvar. Confira as regras do Firestore.';
-      }
+    document.getElementById('addVariation').addEventListener('click', function () {
+      pendingVariations.push({ label: '', file: null });
+      renderVariationsList();
     });
 
     modalBody.querySelectorAll('[data-del]').forEach(function (btn) {
@@ -815,6 +914,80 @@
       });
     });
 
+    // -------- adicionar produto (foto comprimida e salva direto no Firestore) --------
+    document.getElementById('pAdd').addEventListener('click', async function () {
+      var name = document.getElementById('pName').value.trim();
+      var price = document.getElementById('pPrice').value.trim();
+      var errEl = document.getElementById('prodError');
+      errEl.textContent = '';
+      if (!name || !price) { errEl.textContent = 'Preencha nome e preço.'; return; }
+
+      var mediaFile = document.getElementById('pMediaFile').files[0] || null;
+      var mErr = fileError(mediaFile);
+      if (mErr) { errEl.textContent = mErr; return; }
+      for (var k = 0; k < pendingVariations.length; k++) {
+        var vErr = fileError(pendingVariations[k].file);
+        if (vErr) { errEl.textContent = 'Variação ' + (k + 1) + ': ' + vErr; return; }
+      }
+
+      var btn = document.getElementById('pAdd');
+      btn.disabled = true; btn.textContent = 'Processando fotos...';
+      try {
+        var photo = mediaFile ? await compressImage(mediaFile, 700, 0.72) : null;
+        var variations = [];
+        for (var j = 0; j < pendingVariations.length; j++) {
+          var v = pendingVariations[j];
+          var vPhoto = v.file ? await compressImage(v.file, 480, 0.7) : null;
+          variations.push({ label: v.label || ('Modelo ' + (j + 1)), photo: vPhoto });
+        }
+        var payload = { name: name, price: price, photo: photo, variations: variations };
+        if (JSON.stringify(payload).length > DOC_SAFE_LIMIT) {
+          errEl.textContent = 'Fotos grandes demais mesmo comprimidas — tente com menos fotos ou fotos mais simples.';
+          btn.disabled = false; btn.textContent = '+ Adicionar produto';
+          return;
+        }
+        await addDoc(collection(db, 'products'), payload);
+        await loadSiteData();
+        renderAdminPanel();
+      } catch (e) {
+        errEl.textContent = 'Erro ao salvar. Confira as regras do Firestore.';
+        btn.disabled = false; btn.textContent = '+ Adicionar produto';
+      }
+    });
+
+    // -------- salvar banner (fotos comprimidas, salvas no documento config/site) --------
+    document.getElementById('bannerSave').addEventListener('click', async function () {
+      var errEl = document.getElementById('bannerError');
+      errEl.textContent = '';
+      var fileInputs = modalBody.querySelectorAll('.banner-file');
+      for (var x = 0; x < fileInputs.length; x++) {
+        var bErr = fileError(fileInputs[x].files[0] || null);
+        if (bErr) { errEl.textContent = 'Imagem ' + (x + 1) + ': ' + bErr; return; }
+      }
+      var btn2 = document.getElementById('bannerSave');
+      btn2.disabled = true; btn2.textContent = 'Processando fotos...';
+      try {
+        var newImages = SITE_CONFIG.bannerImages.slice();
+        for (var y = 0; y < fileInputs.length; y++) {
+          var f = fileInputs[y].files[0];
+          if (!f) continue;
+          var idx = parseInt(fileInputs[y].getAttribute('data-i'), 10);
+          newImages[idx] = await compressImage(f, 640, 0.65);
+        }
+        if (JSON.stringify(newImages).length > DOC_SAFE_LIMIT) {
+          errEl.textContent = 'Fotos grandes demais mesmo comprimidas — tente trocar menos imagens por vez.';
+          btn2.disabled = false; btn2.textContent = 'Salvar banner';
+          return;
+        }
+        await setDoc(doc(db, 'config', 'site'), { bannerImages: newImages }, { merge: true });
+        await loadSiteData();
+        renderAdminPanel();
+      } catch (e) {
+        errEl.textContent = 'Erro ao salvar. Confira as regras do Firestore.';
+        btn2.disabled = false; btn2.textContent = 'Salvar banner';
+      }
+    });
+
     document.getElementById('cfgSave').addEventListener('click', async function () {
       var data = {
         instagramUrl: document.getElementById('cfgInsta').value.trim(),
@@ -822,12 +995,13 @@
         whatsappGabi: document.getElementById('cfgWaGabi').value.trim(),
         bannerImages: SITE_CONFIG.bannerImages
       };
+      var errEl2 = document.getElementById('cfgError');
       try {
         await setDoc(doc(db, 'config', 'site'), data, { merge: true });
         await loadSiteData();
         renderAdminPanel();
       } catch (e) {
-        document.getElementById('cfgError').textContent = 'Erro ao salvar. Confira as regras do Firestore.';
+        errEl2.textContent = 'Erro ao salvar. Confira as regras do Firestore.';
       }
     });
   }
