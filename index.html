@@ -330,8 +330,32 @@
     background:var(--gradient); -webkit-background-clip:text; background-clip:text; color:transparent;
   }
   .variations-row{ display:flex; gap:6px; flex-wrap:wrap; }
-  .variation-thumb{ width:32px; height:32px; border-radius:8px; object-fit:cover; border:1px solid var(--border); }
-  .variation-chip{ font-size:11px; padding:4px 8px; border-radius:8px; background:rgba(255,255,255,.06); color:var(--muted); }
+  .variation-thumb{
+    width:32px; height:32px; border-radius:8px; object-fit:cover;
+    border:2px solid var(--border); cursor:pointer;
+    transition:transform .15s ease, border-color .15s ease;
+  }
+  .variation-chip{
+    font-size:11px; padding:4px 8px; border-radius:8px;
+    background:rgba(255,255,255,.06); color:var(--muted);
+    border:1px solid transparent; cursor:pointer;
+  }
+  .variation-pick.selected{ border-color:var(--cyan); transform:scale(1.12); }
+  .variation-chip.selected{ border-color:var(--cyan); color:var(--cyan); }
+  .selected-variation-label{ font-size:12px; font-weight:700; color:var(--cyan); min-height:14px; }
+  .lightbox-overlay{
+    position:fixed; inset:0; z-index:60;
+    background:rgba(11,15,26,.92);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .lightbox-overlay[hidden]{ display:none; }
+  .lightbox-overlay img{ max-width:100%; max-height:75vh; border-radius:16px; object-fit:contain; }
+  .lightbox-overlay p{ color:var(--ink); margin-top:14px; font-weight:700; font-size:15px; }
+  .lightbox-close{
+    position:absolute; top:20px; right:20px;
+    background:none; border:none; color:#fff; font-size:32px; cursor:pointer; line-height:1;
+  }
   .product-card .cta-wrap{ position:relative; margin-top:auto; }
   .product-card .cta{
     width:100%; justify-content:center;
@@ -544,6 +568,12 @@
   <div class="modal-card" id="modalBody"></div>
 </div>
 
+<div class="lightbox-overlay" id="lightboxOverlay" hidden>
+  <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Fechar">×</button>
+  <img id="lightboxImg" src="" alt="">
+  <p id="lightboxCaption"></p>
+</div>
+
 <section class="hero" id="catalogoView" hidden>
   <div class="container">
 
@@ -679,7 +709,10 @@
   });
 
   // ---------------- produtos (vitrine pública) ----------------
+  var selectedVariations = []; // selectedVariations[i] = label escolhido (ou null), paralelo a PRODUCTS
+
   function renderProducts () {
+    selectedVariations = PRODUCTS.map(function () { return null; });
     var grid = document.getElementById('productsGrid');
     grid.innerHTML = PRODUCTS.map(function (p, i) {
       var mediaHtml = p.photo
@@ -687,11 +720,15 @@
         : '<div class="photo-placeholder">' + CAMERA_ICON + '<span>Foto do produto</span></div>';
       var variationsHtml = '';
       if (p.variations && p.variations.length) {
-        variationsHtml = '<div class="variations-row">' + p.variations.map(function (v) {
-          return v.photo
-            ? '<img class="variation-thumb" src="' + v.photo + '" title="' + (v.label || '') + '" alt="' + (v.label || '') + '">'
-            : '<span class="variation-chip">' + (v.label || '') + '</span>';
-        }).join('') + '</div>';
+        variationsHtml =
+          '<div class="variations-row">' + p.variations.map(function (v) {
+            var label = (v.label || '').replace(/"/g, '&quot;');
+            if (v.photo) {
+              return '<img class="variation-thumb variation-pick" data-pi="' + i + '" data-label="' + label + '" data-photo="' + v.photo + '" src="' + v.photo + '" title="' + label + '" alt="' + label + '">';
+            }
+            return '<span class="variation-chip variation-pick" data-pi="' + i + '" data-label="' + label + '">' + (v.label || '') + '</span>';
+          }).join('') + '</div>' +
+          '<span class="selected-variation-label" data-pi-label="' + i + '"></span>';
       }
       return (
         '<div class="product-card">' +
@@ -705,8 +742,8 @@
                 WA_ICON + 'Pedir no WhatsApp' +
               '</button>' +
               '<div class="cta-menu" id="prodMenu' + i + '" role="menu" hidden>' +
-                '<a class="cta-menu-item" role="menuitem" target="_blank" rel="noopener" href="' + waLink(SITE_CONFIG.whatsappDiogo, p.name) + '"><span class="dot" style="background:var(--cyan)"></span> Chamar Diogo</a>' +
-                '<a class="cta-menu-item" role="menuitem" target="_blank" rel="noopener" href="' + waLink(SITE_CONFIG.whatsappGabi, p.name) + '"><span class="dot" style="background:var(--pink)"></span> Chamar Gabi</a>' +
+                '<a class="cta-menu-item" role="menuitem" data-wa="diogo" target="_blank" rel="noopener" href="' + waLink(SITE_CONFIG.whatsappDiogo, p.name) + '"><span class="dot" style="background:var(--cyan)"></span> Chamar Diogo</a>' +
+                '<a class="cta-menu-item" role="menuitem" data-wa="gabi" target="_blank" rel="noopener" href="' + waLink(SITE_CONFIG.whatsappGabi, p.name) + '"><span class="dot" style="background:var(--pink)"></span> Chamar Gabi</a>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -714,6 +751,17 @@
       );
     }).join('');
   }
+
+  function openLightbox (src, label) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightboxCaption').textContent = label || '';
+    document.getElementById('lightboxOverlay').hidden = false;
+  }
+  function closeLightbox () { document.getElementById('lightboxOverlay').hidden = true; }
+  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+  document.getElementById('lightboxOverlay').addEventListener('click', function (e) {
+    if (e.target === this) closeLightbox();
+  });
 
   function applyMainLinks () {
     document.getElementById('mainWaDiogo').href = waLink(SITE_CONFIG.whatsappDiogo, null);
@@ -767,6 +815,30 @@
 
   // ---------------- menu de escolha (Diogo / Gabi) — CTA principal + cada produto ----------------
   document.addEventListener('click', function (e) {
+    var pick = e.target.closest('.variation-pick');
+    if (pick) {
+      var pi = parseInt(pick.getAttribute('data-pi'), 10);
+      var label = pick.getAttribute('data-label') || '';
+      selectedVariations[pi] = label;
+
+      var card = pick.closest('.product-card');
+      card.querySelectorAll('.variation-pick').forEach(function (el) { el.classList.remove('selected'); });
+      pick.classList.add('selected');
+
+      var labelEl = card.querySelector('.selected-variation-label');
+      if (labelEl) labelEl.textContent = label ? ('Modelo selecionado: ' + label) : '';
+
+      var fullName = PRODUCTS[pi].name + (label ? ' - ' + label : '');
+      var waDiogo = card.querySelector('[data-wa="diogo"]');
+      var waGabi = card.querySelector('[data-wa="gabi"]');
+      if (waDiogo) waDiogo.href = waLink(SITE_CONFIG.whatsappDiogo, fullName);
+      if (waGabi) waGabi.href = waLink(SITE_CONFIG.whatsappGabi, fullName);
+
+      var photo = pick.getAttribute('data-photo');
+      if (photo) openLightbox(photo, label);
+      return;
+    }
+
     var btn = e.target.closest('.cta[aria-haspopup]');
     if (btn) {
       e.stopPropagation();
@@ -784,6 +856,7 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
+      closeLightbox();
       document.querySelectorAll('.cta-menu').forEach(function (m) { m.hidden = true; });
       document.querySelectorAll('.cta[aria-haspopup]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
     }
