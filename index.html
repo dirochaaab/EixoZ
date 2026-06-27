@@ -335,6 +335,52 @@
     box-shadow:0 0 14px -4px rgba(0,229,255,.4), 0 0 18px -6px rgba(255,45,149,.35);
   }
   .product-card .cta svg{ width:16px; height:16px; }
+
+  /* ---------- admin / login ---------- */
+  .admin-toggle-link{
+    display:block; margin:48px auto 0;
+    background:none; border:none; padding:0;
+    color:var(--muted); font-size:12px; text-decoration:underline;
+    cursor:pointer; text-align:center; width:100%;
+  }
+  .modal-overlay{
+    position:fixed; inset:0; z-index:50;
+    background:rgba(11,15,26,.85);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .modal-overlay[hidden]{ display:none; }
+  .modal-card{
+    background:var(--card); border:1px solid var(--border); border-radius:20px;
+    padding:28px; max-width:460px; width:100%; max-height:85vh; overflow-y:auto;
+  }
+  .modal-card h2{ font-family:'Bebas Neue', sans-serif; font-size:28px; margin:0 0 18px; text-transform:uppercase; }
+  .modal-card h3{ font-size:14px; margin:0 0 10px; color:var(--ink); }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--muted); margin-bottom:6px; }
+  .field input{
+    width:100%; padding:10px 14px; border-radius:10px;
+    border:1px solid var(--border); background:#0B0F1A; color:var(--ink);
+    font-family:inherit; font-size:14px;
+  }
+  .field input:focus-visible{ outline:2px solid var(--cyan); }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+  .btn-primary, .btn-secondary{
+    border-radius:10px; padding:12px 16px; font-weight:800; font-size:14px;
+    cursor:pointer; font-family:inherit;
+  }
+  .btn-primary{ flex:1; border:none; background:var(--gradient); color:#fff; }
+  .btn-secondary{ border:1px solid var(--border); background:transparent; color:var(--ink); }
+  .admin-product-row{
+    display:flex; align-items:center; gap:10px; padding:10px 0;
+    border-bottom:1px solid var(--border); font-size:13.5px;
+  }
+  .admin-product-row span{ flex:1; }
+  .admin-product-row button{
+    background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; font-family:inherit;
+  }
+  .admin-product-row button.danger{ color:var(--pink); }
+  .error-msg{ color:var(--pink); font-size:13px; margin:8px 0 0; min-height:16px; }
 </style>
 </head>
 <body>
@@ -454,19 +500,18 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
         </button>
 
-        <!-- TODO: replace both numbers with the real ones, e.g. 55XXXXXXXXXXX -->
+        <!-- os hrefs abaixo são preenchidos via JS a partir do Firestore (config/site) -->
         <div class="cta-menu" id="ctaMenu" role="menu" hidden>
-          <a class="cta-menu-item" role="menuitem" href="https://wa.me/5500000000001?text=Oi%20Diogo!%20Quero%20fazer%20um%20pedido%20na%20EIXOZ" target="_blank" rel="noopener">
+          <a class="cta-menu-item" role="menuitem" id="mainWaDiogo" href="#" target="_blank" rel="noopener">
             <span class="dot" style="background:var(--cyan)"></span> Chamar Diogo
           </a>
-          <a class="cta-menu-item" role="menuitem" href="https://wa.me/5500000000002?text=Oi%20Gabi!%20Quero%20fazer%20um%20pedido%20na%20EIXOZ" target="_blank" rel="noopener">
+          <a class="cta-menu-item" role="menuitem" id="mainWaGabi" href="#" target="_blank" rel="noopener">
             <span class="dot" style="background:var(--pink)"></span> Chamar Gabi
           </a>
         </div>
       </div>
 
-      <!-- TODO: troque pelo @ do Instagram de vocês -->
-      <a class="cta" href="https://instagram.com/eixoz" target="_blank" rel="noopener">
+      <a class="cta" id="instagramLink" href="#" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="5"/>
           <circle cx="12" cy="12" r="4"/>
@@ -476,8 +521,14 @@
       </a>
     </div>
 
+    <button type="button" class="admin-toggle-link" id="adminToggle">Área da equipe</button>
+
   </div>
 </section>
+
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal-card" id="modalBody"></div>
+</div>
 
 <section class="hero" id="catalogoView" hidden>
   <div class="container">
@@ -495,25 +546,62 @@
   </div>
 </section>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyAW4udAJEz4Tq5LTkUQIrSEfI7bn0fGVpo",
+    authDomain: "eixo-z-loja.firebaseapp.com",
+    projectId: "eixo-z-loja",
+    storageBucket: "eixo-z-loja.firebasestorage.app",
+    messagingSenderId: "597462227321",
+    appId: "1:597462227321:web:c19d133881ab361161f7a8"
+  };
+  var app = initializeApp(firebaseConfig);
+  var auth = getAuth(app);
+  var db = getFirestore(app);
+
   var WA_ICON = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.9-.5-1.8-1.1-2.5-1.9-.6-.7-1.1-1.4-1.6-2.2-.1-.2 0-.4.1-.5.2-.2.5-.5.6-.7.1-.2.2-.4.1-.6-.1-.2-.7-1.7-1-2.3-.2-.5-.5-.4-.7-.4-.6 0-1 .1-1.4.5-1.4 1.4-1.4 3.2.1 5.1 1.6 2.1 3.2 3.4 5.7 4.3 2 .7 2.9.4 3.5-.1.5-.5.9-1.4.7-1.9-.1-.2-.3-.4-.4-.5Z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.2-1.3c1.4.8 3.1 1.3 4.8 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3C4 14.9 3.6 13.5 3.6 12c0-4.6 3.8-8.4 8.4-8.4s8.4 3.8 8.4 8.4-3.8 8.4-8.4 8.4Z"/></svg>';
   var CAMERA_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 
-  // TODO: troque pelas suas 5 fotos (URL ou base64). Deixando null, mostra um placeholder.
-  var BANNER_IMAGES = [null, null, null, null, null];
+  // ---- valores padrão (usados se ainda não houver nada salvo no Firestore) ----
+  var SITE_CONFIG = {
+    instagramUrl: 'https://instagram.com/eixoz',
+    whatsappDiogo: '5500000000001',
+    whatsappGabi: '5500000000002',
+    bannerImages: [null, null, null, null, null]
+  };
+  var PRODUCTS = [
+    { id: null, name: 'Vaso Hexagonal', price: 'R$ 39,90', photo: null },
+    { id: null, name: 'Suporte de Celular', price: 'R$ 24,90', photo: null },
+    { id: null, name: 'Porta-canetas Geométrico', price: 'R$ 29,90', photo: null }
+  ];
+
+  function waLink (number, productName) {
+    var msg = encodeURIComponent('Oi! Quero pedir' + (productName ? ': ' + productName : ''));
+    return 'https://wa.me/' + number + '?text=' + msg;
+  }
+
+  // ---------------- banner (5 imagens) ----------------
   var bannerIndex = 0;
   var bannerTimer = null;
 
   function renderBanner () {
     var track = document.querySelector('#bannerCarousel .banner-track');
     var dotsWrap = document.getElementById('bannerDots');
-    track.innerHTML = BANNER_IMAGES.map(function (src, i) {
+    track.innerHTML = SITE_CONFIG.bannerImages.map(function (src, i) {
       var inner = src
         ? '<img src="' + src + '" alt="Banner ' + (i + 1) + '">'
         : '<div class="photo-placeholder">' + CAMERA_ICON + '<span>Imagem ' + (i + 1) + '</span></div>';
       return '<div class="banner-slide' + (i === 0 ? ' active' : '') + '">' + inner + '</div>';
     }).join('');
-    dotsWrap.innerHTML = BANNER_IMAGES.map(function (_, i) {
+    dotsWrap.innerHTML = SITE_CONFIG.bannerImages.map(function (_, i) {
       return '<button type="button" class="banner-dot' + (i === 0 ? ' active' : '') + '" aria-label="Imagem ' + (i + 1) + '" data-index="' + i + '"></button>';
     }).join('');
   }
@@ -521,6 +609,7 @@
   function showBannerSlide (i) {
     var slides = document.querySelectorAll('.banner-slide');
     var dots = document.querySelectorAll('.banner-dot');
+    if (!slides[i]) return;
     slides.forEach(function (s) { s.classList.remove('active'); });
     dots.forEach(function (d) { d.classList.remove('active'); });
     slides[i].classList.add('active');
@@ -530,39 +619,25 @@
 
   function startBannerAuto () {
     if (bannerTimer) clearInterval(bannerTimer);
-    // mesmo ritmo de "ida e volta" do pulso da linha neon, só que mais lento (troca de imagem)
     bannerTimer = setInterval(function () {
-      showBannerSlide((bannerIndex + 1) % BANNER_IMAGES.length);
+      showBannerSlide((bannerIndex + 1) % SITE_CONFIG.bannerImages.length);
     }, 3200);
   }
 
-  renderBanner();
   document.getElementById('bannerDots').addEventListener('click', function (e) {
     var dot = e.target.closest('.banner-dot');
     if (!dot) return;
     showBannerSlide(parseInt(dot.getAttribute('data-index'), 10));
     startBannerAuto();
   });
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    startBannerAuto();
-  }
 
-  // TODO: troque pelos seus produtos reais. "photo" pode ser uma URL ou uma imagem em base64;
-  // deixando null, o card mostra um placeholder de foto.
-  var PRODUCTS = [
-    { name: 'Vaso Hexagonal', price: 'R$ 39,90', photo: null },
-    { name: 'Suporte de Celular', price: 'R$ 24,90', photo: null },
-    { name: 'Porta-canetas Geométrico', price: 'R$ 29,90', photo: null }
-  ];
-
+  // ---------------- produtos ----------------
   function renderProducts () {
     var grid = document.getElementById('productsGrid');
     grid.innerHTML = PRODUCTS.map(function (p, i) {
       var photoHtml = p.photo
         ? '<img class="photo" src="' + p.photo + '" alt="' + p.name + '">'
         : '<div class="photo-placeholder">' + CAMERA_ICON + '<span>Foto do produto</span></div>';
-      var msgDiogo = encodeURIComponent('Oi Diogo! Quero pedir: ' + p.name);
-      var msgGabi = encodeURIComponent('Oi Gabi! Quero pedir: ' + p.name);
       return (
         '<div class="product-card">' +
           photoHtml +
@@ -574,8 +649,8 @@
                 WA_ICON + 'Pedir no WhatsApp' +
               '</button>' +
               '<div class="cta-menu" id="prodMenu' + i + '" role="menu" hidden>' +
-                '<a class="cta-menu-item" role="menuitem" target="_blank" rel="noopener" href="https://wa.me/5500000000001?text=' + msgDiogo + '"><span class="dot" style="background:var(--cyan)"></span> Chamar Diogo</a>' +
-                '<a class="cta-menu-item" role="menuitem" target="_blank" rel="noopener" href="https://wa.me/5500000000002?text=' + msgGabi + '"><span class="dot" style="background:var(--pink)"></span> Chamar Gabi</a>' +
+                '<a class="cta-menu-item" role="menuitem" target="_blank" rel="noopener" href="' + waLink(SITE_CONFIG.whatsappDiogo, p.name) + '"><span class="dot" style="background:var(--cyan)"></span> Chamar Diogo</a>' +
+                '<a class="cta-menu-item" role="menuitem" target="_blank" rel="noopener" href="' + waLink(SITE_CONFIG.whatsappGabi, p.name) + '"><span class="dot" style="background:var(--pink)"></span> Chamar Gabi</a>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -583,9 +658,42 @@
       );
     }).join('');
   }
-  renderProducts();
 
-  // alternância Home <-> Catálogo
+  function applyMainLinks () {
+    document.getElementById('mainWaDiogo').href = waLink(SITE_CONFIG.whatsappDiogo, null);
+    document.getElementById('mainWaGabi').href = waLink(SITE_CONFIG.whatsappGabi, null);
+    document.getElementById('instagramLink').href = SITE_CONFIG.instagramUrl;
+  }
+
+  // ---------------- carregar do Firestore (com fallback pros padrões) ----------------
+  async function loadSiteData () {
+    try {
+      var configSnap = await getDoc(doc(db, 'config', 'site'));
+      if (configSnap.exists()) {
+        var data = configSnap.data();
+        if (data.instagramUrl) SITE_CONFIG.instagramUrl = data.instagramUrl;
+        if (data.whatsappDiogo) SITE_CONFIG.whatsappDiogo = data.whatsappDiogo;
+        if (data.whatsappGabi) SITE_CONFIG.whatsappGabi = data.whatsappGabi;
+        if (Array.isArray(data.bannerImages) && data.bannerImages.length) SITE_CONFIG.bannerImages = data.bannerImages;
+      }
+    } catch (e) { console.warn('Config do Firestore indisponível, usando padrão.', e); }
+
+    try {
+      var snap = await getDocs(collection(db, 'products'));
+      if (!snap.empty) {
+        PRODUCTS = snap.docs.map(function (d) {
+          var v = d.data();
+          return { id: d.id, name: v.name || '', price: v.price || '', photo: v.photo || null };
+        });
+      }
+    } catch (e) { console.warn('Produtos do Firestore indisponíveis, usando exemplos.', e); }
+
+    renderBanner();
+    renderProducts();
+    applyMainLinks();
+  }
+
+  // ---------------- alternância Home <-> Catálogo ----------------
   var homeView = document.getElementById('homeView');
   var catalogoView = document.getElementById('catalogoView');
   document.getElementById('openCatalogo').addEventListener('click', function () {
@@ -595,7 +703,7 @@
     catalogoView.hidden = true; homeView.hidden = false; window.scrollTo(0, 0);
   });
 
-  // menu de escolha (Diogo / Gabi) — funciona pro CTA principal e pra cada produto
+  // ---------------- menu de escolha (Diogo / Gabi) — CTA principal + cada produto ----------------
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.cta[aria-haspopup]');
     if (btn) {
@@ -619,8 +727,128 @@
     }
   });
 
+  // ---------------- área admin (login + painel) ----------------
+  var adminToggle = document.getElementById('adminToggle');
+  var modalOverlay = document.getElementById('modalOverlay');
+  var modalBody = document.getElementById('modalBody');
+
+  function closeModal () { modalOverlay.hidden = true; modalBody.innerHTML = ''; }
+
+  function renderLoginForm () {
+    modalBody.innerHTML =
+      '<h2>Entrar</h2>' +
+      '<div class="field"><label>E-mail</label><input type="email" id="loginEmail" autocomplete="username"></div>' +
+      '<div class="field"><label>Senha</label><input type="password" id="loginPass" autocomplete="current-password"></div>' +
+      '<p class="error-msg" id="loginError"></p>' +
+      '<div class="modal-actions">' +
+        '<button class="btn-secondary" id="modalClose" type="button">Cancelar</button>' +
+        '<button class="btn-primary" id="loginSubmit" type="button">Entrar</button>' +
+      '</div>';
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('loginSubmit').addEventListener('click', function () {
+      var email = document.getElementById('loginEmail').value.trim();
+      var pass = document.getElementById('loginPass').value;
+      document.getElementById('loginError').textContent = '';
+      signInWithEmailAndPassword(auth, email, pass).catch(function () {
+        document.getElementById('loginError').textContent = 'E-mail ou senha incorretos.';
+      });
+    });
+  }
+
+  function renderAdminPanel () {
+    var productsHtml = PRODUCTS.map(function (p, i) {
+      return '<div class="admin-product-row"><span>' + p.name + ' — ' + p.price + '</span>' +
+        '<button type="button" class="danger" data-del="' + i + '">Excluir</button></div>';
+    }).join('') || '<p style="color:var(--muted);font-size:13px;">Nenhum produto ainda.</p>';
+
+    modalBody.innerHTML =
+      '<h2>Painel EIXOZ</h2>' +
+      '<p style="color:var(--muted);font-size:12.5px;margin:-10px 0 18px;">' + (auth.currentUser ? auth.currentUser.email : '') + '</p>' +
+
+      '<h3>Produtos</h3>' +
+      productsHtml +
+      '<div class="field" style="margin-top:14px;"><label>Nome do produto</label><input id="pName" placeholder="Ex: Vaso Hexagonal"></div>' +
+      '<div class="field"><label>Preço</label><input id="pPrice" placeholder="Ex: R$ 39,90"></div>' +
+      '<div class="field"><label>URL da foto (opcional)</label><input id="pPhoto" placeholder="https://..."></div>' +
+      '<p class="error-msg" id="prodError"></p>' +
+      '<button class="btn-primary" id="pAdd" type="button" style="width:100%;margin-bottom:24px;">+ Adicionar produto</button>' +
+
+      '<h3>Links</h3>' +
+      '<div class="field"><label>Instagram (URL)</label><input id="cfgInsta" value="' + SITE_CONFIG.instagramUrl + '"></div>' +
+      '<div class="field"><label>WhatsApp Diogo (DDI+DDD+número, só números)</label><input id="cfgWaDiogo" value="' + SITE_CONFIG.whatsappDiogo + '"></div>' +
+      '<div class="field"><label>WhatsApp Gabi (DDI+DDD+número, só números)</label><input id="cfgWaGabi" value="' + SITE_CONFIG.whatsappGabi + '"></div>' +
+      '<p class="error-msg" id="cfgError"></p>' +
+      '<button class="btn-primary" id="cfgSave" type="button" style="width:100%;">Salvar links</button>' +
+
+      '<div class="modal-actions" style="margin-top:24px;">' +
+        '<button class="btn-secondary" id="modalClose" type="button">Fechar</button>' +
+        '<button class="btn-secondary" id="logoutBtn" type="button">Sair</button>' +
+      '</div>';
+
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('logoutBtn').addEventListener('click', function () { signOut(auth); });
+
+    document.getElementById('pAdd').addEventListener('click', async function () {
+      var name = document.getElementById('pName').value.trim();
+      var price = document.getElementById('pPrice').value.trim();
+      var photo = document.getElementById('pPhoto').value.trim() || null;
+      if (!name || !price) {
+        document.getElementById('prodError').textContent = 'Preencha nome e preço.';
+        return;
+      }
+      try {
+        await addDoc(collection(db, 'products'), { name: name, price: price, photo: photo });
+        await loadSiteData();
+        renderAdminPanel();
+      } catch (e) {
+        document.getElementById('prodError').textContent = 'Erro ao salvar. Confira as regras do Firestore.';
+      }
+    });
+
+    modalBody.querySelectorAll('[data-del]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var idx = parseInt(btn.getAttribute('data-del'), 10);
+        var p = PRODUCTS[idx];
+        if (p.id) await deleteDoc(doc(db, 'products', p.id));
+        await loadSiteData();
+        renderAdminPanel();
+      });
+    });
+
+    document.getElementById('cfgSave').addEventListener('click', async function () {
+      var data = {
+        instagramUrl: document.getElementById('cfgInsta').value.trim(),
+        whatsappDiogo: document.getElementById('cfgWaDiogo').value.trim(),
+        whatsappGabi: document.getElementById('cfgWaGabi').value.trim(),
+        bannerImages: SITE_CONFIG.bannerImages
+      };
+      try {
+        await setDoc(doc(db, 'config', 'site'), data, { merge: true });
+        await loadSiteData();
+        renderAdminPanel();
+      } catch (e) {
+        document.getElementById('cfgError').textContent = 'Erro ao salvar. Confira as regras do Firestore.';
+      }
+    });
+  }
+
+  adminToggle.addEventListener('click', function () {
+    modalOverlay.hidden = false;
+    if (auth.currentUser) renderAdminPanel(); else renderLoginForm();
+  });
+
+  onAuthStateChanged(auth, function (user) {
+    if (!modalOverlay.hidden) {
+      if (user) renderAdminPanel(); else renderLoginForm();
+    }
+  });
+
+  loadSiteData();
+
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     document.querySelectorAll('animateMotion').forEach(function (el) { el.setAttribute('repeatCount', '0'); });
+  } else {
+    startBannerAuto();
   }
 </script>
 
