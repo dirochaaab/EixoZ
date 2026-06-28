@@ -356,6 +356,41 @@
     position:absolute; top:20px; right:20px;
     background:none; border:none; color:#fff; font-size:32px; cursor:pointer; line-height:1;
   }
+  .lightbox-nav{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:44px; height:44px; border-radius:50%;
+    background:rgba(255,255,255,.1); border:none; color:#fff;
+    font-size:28px; line-height:1; cursor:pointer;
+  }
+  .lightbox-prev{ left:14px; }
+  .lightbox-next{ right:14px; }
+  .lightbox-dots{ display:flex; gap:6px; margin-top:12px; }
+  .lightbox-dot{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.3); border:none; padding:0; cursor:pointer; }
+  .lightbox-dot.active{ background:var(--cyan); }
+  .product-extra-info{ font-size:12.5px; color:var(--muted); margin:0; line-height:1.45; }
+  .cart-fab{
+    position:fixed; bottom:24px; right:24px; z-index:40;
+    width:56px; height:56px; border-radius:50%;
+    background:var(--gradient); border:none; color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 24px -8px rgba(0,0,0,.55);
+    cursor:pointer;
+  }
+  .cart-fab svg{ width:24px; height:24px; }
+  .cart-count{
+    position:absolute; top:-4px; right:-4px;
+    background:var(--pink); color:#fff; font-size:11px; font-weight:800;
+    width:20px; height:20px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .field textarea{
+    width:100%; padding:10px 14px; border-radius:10px;
+    border:1px solid var(--border); background:#0B0F1A; color:var(--ink);
+    font-family:inherit; font-size:14px; resize:vertical;
+  }
+  .checkbox-label{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink); cursor:pointer; font-weight:600; }
+  .checkbox-label input{ width:auto; accent-color:var(--cyan); }
+  .photo-slot{ display:block; margin-bottom:8px; }
   .product-card .cta-wrap{ position:relative; margin-top:auto; }
   .product-card .cta{
     width:100%; justify-content:center;
@@ -538,13 +573,13 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
         </button>
 
-        <!-- os hrefs abaixo são preenchidos via JS a partir do Firestore (config/site) -->
+        <!-- os hrefs e nomes abaixo são preenchidos via JS a partir do Firestore (config/site) -->
         <div class="cta-menu" id="ctaMenu" role="menu" hidden>
           <a class="cta-menu-item" role="menuitem" id="mainWaDiogo" href="#" target="_blank" rel="noopener">
-            <span class="dot" style="background:var(--cyan)"></span> Chamar Diogo
+            <span class="dot" style="background:var(--cyan)"></span> Chamar <span id="mainWaDiogoName">Diogo</span>
           </a>
           <a class="cta-menu-item" role="menuitem" id="mainWaGabi" href="#" target="_blank" rel="noopener">
-            <span class="dot" style="background:var(--pink)"></span> Chamar Gabi
+            <span class="dot" style="background:var(--pink)"></span> Chamar <span id="mainWaGabiName">Gabi</span>
           </a>
         </div>
       </div>
@@ -568,10 +603,17 @@
   <div class="modal-card" id="modalBody"></div>
 </div>
 
+<div class="modal-overlay" id="cartOverlay" hidden>
+  <div class="modal-card" id="cartBody"></div>
+</div>
+
 <div class="lightbox-overlay" id="lightboxOverlay" hidden>
   <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Fechar">×</button>
+  <button type="button" class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Foto anterior">‹</button>
   <img id="lightboxImg" src="" alt="">
+  <button type="button" class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Próxima foto">›</button>
   <p id="lightboxCaption"></p>
+  <div class="lightbox-dots" id="lightboxDots"></div>
 </div>
 
 <section class="hero" id="catalogoView" hidden>
@@ -583,11 +625,16 @@
     </button>
 
     <h2 class="catalogo-title">NOSSOS <span class="grad-a">PRODUTOS</span></h2>
-    <p class="lede">Escolha uma peça e chama no WhatsApp pra fechar o pedido.</p>
+    <p class="lede">Escolha uma peça, selecione o modelo (se houver) e adicione ao carrinho.</p>
 
     <div class="products-grid" id="productsGrid"></div>
 
   </div>
+
+  <button type="button" class="cart-fab" id="cartFab" aria-label="Ver carrinho">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
+    <span class="cart-count" id="cartCount">0</span>
+  </button>
 </section>
 
 <script type="module">
@@ -613,28 +660,35 @@
 
   var WA_ICON = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.9-.5-1.8-1.1-2.5-1.9-.6-.7-1.1-1.4-1.6-2.2-.1-.2 0-.4.1-.5.2-.2.5-.5.6-.7.1-.2.2-.4.1-.6-.1-.2-.7-1.7-1-2.3-.2-.5-.5-.4-.7-.4-.6 0-1 .1-1.4.5-1.4 1.4-1.4 3.2.1 5.1 1.6 2.1 3.2 3.4 5.7 4.3 2 .7 2.9.4 3.5-.1.5-.5.9-1.4.7-1.9-.1-.2-.3-.4-.4-.5Z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.2-1.3c1.4.8 3.1 1.3 4.8 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3C4 14.9 3.6 13.5 3.6 12c0-4.6 3.8-8.4 8.4-8.4s8.4 3.8 8.4 8.4-3.8 8.4-8.4 8.4Z"/></svg>';
   var CAMERA_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+  var CART_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>';
 
   // ---- valores padrão (usados se ainda não houver nada salvo no Firestore) ----
   var SITE_CONFIG = {
     instagramUrl: 'https://instagram.com/eixoz',
-    whatsappDiogo: '5500000000001',
-    whatsappGabi: '5500000000002',
+    whatsappDiogo: '5500000000001', nameDiogo: 'Diogo',
+    whatsappGabi: '5500000000002', nameGabi: 'Gabi',
     bannerImages: [null, null, null, null, null]
   };
   var PRODUCTS = [
-    { id: null, name: 'Vaso Hexagonal', price: 'R$ 39,90', photo: null, variations: [] },
-    { id: null, name: 'Suporte de Celular', price: 'R$ 24,90', photo: null, variations: [] },
-    { id: null, name: 'Porta-canetas Geométrico', price: 'R$ 29,90', photo: null, variations: [] }
+    { id: null, name: 'Vaso Hexagonal', price: 'R$ 39,90', info: '', hasVariations: false, photos: [], variations: [] },
+    { id: null, name: 'Suporte de Celular', price: 'R$ 24,90', info: '', hasVariations: false, photos: [], variations: [] },
+    { id: null, name: 'Porta-canetas Geométrico', price: 'R$ 29,90', info: '', hasVariations: false, photos: [], variations: [] }
   ];
+  var cart = []; // [{ name, variation, price, priceNum, qty }]
 
-  function waLink (number, productName) {
-    var msg = encodeURIComponent('Oi! Quero pedir' + (productName ? ': ' + productName : ''));
-    return 'https://wa.me/' + number + '?text=' + msg;
+  function waLink (number, text) { return 'https://wa.me/' + number + '?text=' + encodeURIComponent(text); }
+
+  function parsePrice (str) {
+    if (!str) return 0;
+    var cleaned = String(str).replace(/[^\d,.]/g, '');
+    if (cleaned.indexOf(',') !== -1) cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    var n = parseFloat(cleaned);
+    return isNaN(n) ? 0 : n;
   }
 
   // ---------------- fotos: validação + compressão (sem Storage, 100% Firestore) ----------------
-  var RAW_MAX_MB = 15;          // tamanho máx do arquivo original antes de comprimir
-  var DOC_SAFE_LIMIT = 900000;  // bytes — folga abaixo do limite de 1MB por documento do Firestore
+  var RAW_MAX_MB = 15;
+  var DOC_SAFE_LIMIT = 900000; // bytes — folga abaixo do limite de 1MB por documento do Firestore
 
   function fileError (file) {
     if (!file) return null;
@@ -708,6 +762,50 @@
     startBannerAuto();
   });
 
+  // ---------------- lightbox (galeria com várias fotos) ----------------
+  var lightboxPhotos = [];
+  var lightboxIndex = 0;
+
+  function renderLightboxFrame (caption) {
+    document.getElementById('lightboxImg').src = lightboxPhotos[lightboxIndex] || '';
+    if (caption !== undefined) document.getElementById('lightboxCaption').textContent = caption || '';
+    var dotsWrap = document.getElementById('lightboxDots');
+    dotsWrap.innerHTML = lightboxPhotos.length > 1
+      ? lightboxPhotos.map(function (_, i) {
+          return '<button type="button" class="lightbox-dot' + (i === lightboxIndex ? ' active' : '') + '" data-i="' + i + '"></button>';
+        }).join('')
+      : '';
+    var multi = lightboxPhotos.length > 1;
+    document.getElementById('lightboxPrev').style.display = multi ? '' : 'none';
+    document.getElementById('lightboxNext').style.display = multi ? '' : 'none';
+  }
+  function openLightboxGallery (photos, caption, startIndex) {
+    lightboxPhotos = (photos || []).filter(Boolean);
+    if (!lightboxPhotos.length) return;
+    lightboxIndex = startIndex || 0;
+    renderLightboxFrame(caption);
+    document.getElementById('lightboxOverlay').hidden = false;
+  }
+  function closeLightbox () { document.getElementById('lightboxOverlay').hidden = true; }
+  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+  document.getElementById('lightboxPrev').addEventListener('click', function () {
+    lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length;
+    renderLightboxFrame();
+  });
+  document.getElementById('lightboxNext').addEventListener('click', function () {
+    lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length;
+    renderLightboxFrame();
+  });
+  document.getElementById('lightboxDots').addEventListener('click', function (e) {
+    var d = e.target.closest('.lightbox-dot');
+    if (!d) return;
+    lightboxIndex = parseInt(d.getAttribute('data-i'), 10);
+    renderLightboxFrame();
+  });
+  document.getElementById('lightboxOverlay').addEventListener('click', function (e) {
+    if (e.target === this) closeLightbox();
+  });
+
   // ---------------- produtos (vitrine pública) ----------------
   var selectedVariations = []; // selectedVariations[i] = label escolhido (ou null), paralelo a PRODUCTS
 
@@ -715,36 +813,46 @@
     selectedVariations = PRODUCTS.map(function () { return null; });
     var grid = document.getElementById('productsGrid');
     grid.innerHTML = PRODUCTS.map(function (p, i) {
-      var mediaHtml = p.photo
-        ? '<img class="photo" src="' + p.photo + '" alt="' + p.name + '">'
+      var photosArr = (p.photos && p.photos.length) ? p.photos : [];
+      var coverPhoto = photosArr[0] || null;
+      var mediaHtml = coverPhoto
+        ? '<img class="photo" src="' + coverPhoto + '" alt="' + p.name + '">'
         : '<div class="photo-placeholder">' + CAMERA_ICON + '<span>Foto do produto</span></div>';
+
+      var galleryHtml = '';
+      if (!p.hasVariations && photosArr.length > 1) {
+        galleryHtml = '<div class="variations-row">' + photosArr.map(function (ph, gi) {
+          return '<img class="variation-thumb gallery-pick" data-pi="' + i + '" data-gi="' + gi + '" src="' + ph + '" alt="Foto ' + (gi + 1) + '">';
+        }).join('') + '</div>';
+      }
+
       var variationsHtml = '';
-      if (p.variations && p.variations.length) {
+      if (p.hasVariations && p.variations && p.variations.length) {
         variationsHtml =
-          '<div class="variations-row">' + p.variations.map(function (v) {
+          '<div class="variations-row">' + p.variations.map(function (v, vi) {
             var label = (v.label || '').replace(/"/g, '&quot;');
-            if (v.photo) {
-              return '<img class="variation-thumb variation-pick" data-pi="' + i + '" data-label="' + label + '" data-photo="' + v.photo + '" src="' + v.photo + '" title="' + label + '" alt="' + label + '">';
+            var vPhotos = (v.photos && v.photos.length) ? v.photos : [];
+            if (vPhotos[0]) {
+              return '<img class="variation-thumb variation-pick" data-pi="' + i + '" data-vi="' + vi + '" data-label="' + label + '" src="' + vPhotos[0] + '" title="' + label + '" alt="' + label + '">';
             }
-            return '<span class="variation-chip variation-pick" data-pi="' + i + '" data-label="' + label + '">' + (v.label || '') + '</span>';
+            return '<span class="variation-chip variation-pick" data-pi="' + i + '" data-vi="' + vi + '" data-label="' + label + '">' + (v.label || '') + '</span>';
           }).join('') + '</div>' +
           '<span class="selected-variation-label" data-pi-label="' + i + '"></span>';
       }
+
+      var infoHtml = p.info ? '<p class="product-extra-info">' + p.info + '</p>' : '';
+
       return (
         '<div class="product-card">' +
           mediaHtml +
           '<div class="info">' +
             '<h3>' + p.name + '</h3>' +
             '<span class="price">' + p.price + '</span>' +
+            infoHtml +
+            galleryHtml +
             variationsHtml +
             '<div class="cta-wrap">' +
-              '<button class="cta" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="prodMenu' + i + '">' +
-                WA_ICON + 'Pedir no WhatsApp' +
-              '</button>' +
-              '<div class="cta-menu" id="prodMenu' + i + '" role="menu" hidden>' +
-                '<a class="cta-menu-item" role="menuitem" data-wa="diogo" target="_blank" rel="noopener" href="' + waLink(SITE_CONFIG.whatsappDiogo, p.name) + '"><span class="dot" style="background:var(--cyan)"></span> Chamar Diogo</a>' +
-                '<a class="cta-menu-item" role="menuitem" data-wa="gabi" target="_blank" rel="noopener" href="' + waLink(SITE_CONFIG.whatsappGabi, p.name) + '"><span class="dot" style="background:var(--pink)"></span> Chamar Gabi</a>' +
-              '</div>' +
+              '<button class="cta cart-add" type="button" data-pi="' + i + '">' + CART_ICON + 'Adicionar ao carrinho</button>' +
             '</div>' +
           '</div>' +
         '</div>'
@@ -752,20 +860,11 @@
     }).join('');
   }
 
-  function openLightbox (src, label) {
-    document.getElementById('lightboxImg').src = src;
-    document.getElementById('lightboxCaption').textContent = label || '';
-    document.getElementById('lightboxOverlay').hidden = false;
-  }
-  function closeLightbox () { document.getElementById('lightboxOverlay').hidden = true; }
-  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-  document.getElementById('lightboxOverlay').addEventListener('click', function (e) {
-    if (e.target === this) closeLightbox();
-  });
-
   function applyMainLinks () {
-    document.getElementById('mainWaDiogo').href = waLink(SITE_CONFIG.whatsappDiogo, null);
-    document.getElementById('mainWaGabi').href = waLink(SITE_CONFIG.whatsappGabi, null);
+    document.getElementById('mainWaDiogo').href = waLink(SITE_CONFIG.whatsappDiogo, 'Oi ' + SITE_CONFIG.nameDiogo + '! Quero fazer um pedido na EIXOZ');
+    document.getElementById('mainWaGabi').href = waLink(SITE_CONFIG.whatsappGabi, 'Oi ' + SITE_CONFIG.nameGabi + '! Quero fazer um pedido na EIXOZ');
+    document.getElementById('mainWaDiogoName').textContent = SITE_CONFIG.nameDiogo;
+    document.getElementById('mainWaGabiName').textContent = SITE_CONFIG.nameGabi;
     document.getElementById('instagramLink').href = SITE_CONFIG.instagramUrl;
   }
 
@@ -778,6 +877,8 @@
         if (data.instagramUrl) SITE_CONFIG.instagramUrl = data.instagramUrl;
         if (data.whatsappDiogo) SITE_CONFIG.whatsappDiogo = data.whatsappDiogo;
         if (data.whatsappGabi) SITE_CONFIG.whatsappGabi = data.whatsappGabi;
+        if (data.nameDiogo) SITE_CONFIG.nameDiogo = data.nameDiogo;
+        if (data.nameGabi) SITE_CONFIG.nameGabi = data.nameGabi;
         if (Array.isArray(data.bannerImages) && data.bannerImages.length) SITE_CONFIG.bannerImages = data.bannerImages;
       }
     } catch (e) { console.warn('Config do Firestore indisponível, usando padrão.', e); }
@@ -787,12 +888,19 @@
       if (!snap.empty) {
         PRODUCTS = snap.docs.map(function (d) {
           var v = d.data();
+          var photos = Array.isArray(v.photos) ? v.photos : (v.photo ? [v.photo] : []);
+          var variations = Array.isArray(v.variations) ? v.variations.map(function (vr) {
+            var vPhotos = Array.isArray(vr.photos) ? vr.photos : (vr.photo ? [vr.photo] : []);
+            return { label: vr.label || '', photos: vPhotos };
+          }) : [];
           return {
             id: d.id,
             name: v.name || '',
             price: v.price || '',
-            photo: v.photo || null,
-            variations: Array.isArray(v.variations) ? v.variations : []
+            info: v.info || '',
+            hasVariations: typeof v.hasVariations === 'boolean' ? v.hasVariations : (variations.length > 0),
+            photos: photos,
+            variations: variations
           };
         });
       }
@@ -813,11 +921,76 @@
     catalogoView.hidden = true; homeView.hidden = false; window.scrollTo(0, 0);
   });
 
-  // ---------------- menu de escolha (Diogo / Gabi) — CTA principal + cada produto ----------------
+  // ---------------- carrinho ----------------
+  var cartFab = document.getElementById('cartFab');
+  var cartOverlay = document.getElementById('cartOverlay');
+  var cartBody = document.getElementById('cartBody');
+
+  function updateCartBadge () {
+    document.getElementById('cartCount').textContent = cart.reduce(function (s, it) { return s + it.qty; }, 0);
+  }
+
+  function addToCart (name, variation, price) {
+    var priceNum = parsePrice(price);
+    var existing = cart.find(function (it) { return it.name === name && it.variation === variation; });
+    if (existing) existing.qty += 1;
+    else cart.push({ name: name, variation: variation, price: price, priceNum: priceNum, qty: 1 });
+    updateCartBadge();
+  }
+
+  function buildCartMessage () {
+    var lines = cart.map(function (it) {
+      return '- ' + (it.qty > 1 ? it.qty + 'x ' : '') + it.name + (it.variation ? ' (' + it.variation + ')' : '') + ' — ' + it.price;
+    });
+    var total = cart.reduce(function (s, it) { return s + it.priceNum * it.qty; }, 0);
+    return 'Oi! Quero fazer esse pedido:\n' + lines.join('\n') + '\nTotal aproximado: R$ ' + total.toFixed(2).replace('.', ',');
+  }
+
+  function renderCart () {
+    var itemsHtml = cart.map(function (it, idx) {
+      return '<div class="admin-product-row"><span>' + (it.qty > 1 ? it.qty + 'x ' : '') + it.name + (it.variation ? ' — ' + it.variation : '') + ' · ' + it.price + '</span>' +
+        '<button type="button" class="danger" data-cart-rm="' + idx + '">Remover</button></div>';
+    }).join('') || '<p style="color:var(--muted);font-size:13px;">Carrinho vazio.</p>';
+
+    var total = cart.reduce(function (s, it) { return s + it.priceNum * it.qty; }, 0);
+
+    cartBody.innerHTML =
+      '<h2>Seu carrinho</h2>' +
+      itemsHtml +
+      (cart.length ? '<p style="margin:14px 0 0;font-weight:800;">Total aproximado: R$ ' + total.toFixed(2).replace('.', ',') + '</p>' : '') +
+      '<div class="cta-wrap" style="margin-top:22px;position:relative;">' +
+        '<button class="cta" type="button" id="cartCheckout" aria-haspopup="true" aria-expanded="false" aria-controls="cartMenu"' + (cart.length ? '' : ' disabled') + '>' + WA_ICON + 'Chamar no WhatsApp</button>' +
+        '<div class="cta-menu" id="cartMenu" role="menu" hidden>' +
+          '<a class="cta-menu-item" role="menuitem" id="cartWaDiogo" target="_blank" rel="noopener"><span class="dot" style="background:var(--cyan)"></span> Chamar ' + SITE_CONFIG.nameDiogo + '</a>' +
+          '<a class="cta-menu-item" role="menuitem" id="cartWaGabi" target="_blank" rel="noopener"><span class="dot" style="background:var(--pink)"></span> Chamar ' + SITE_CONFIG.nameGabi + '</a>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-actions" style="margin-top:18px;"><button class="btn-secondary" id="cartClose" type="button" style="width:100%;">Fechar</button></div>';
+
+    if (cart.length) {
+      var msg = buildCartMessage();
+      document.getElementById('cartWaDiogo').href = waLink(SITE_CONFIG.whatsappDiogo, msg);
+      document.getElementById('cartWaGabi').href = waLink(SITE_CONFIG.whatsappGabi, msg);
+    }
+    document.getElementById('cartClose').addEventListener('click', function () { cartOverlay.hidden = true; });
+    cartBody.querySelectorAll('[data-cart-rm]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        cart.splice(parseInt(btn.getAttribute('data-cart-rm'), 10), 1);
+        updateCartBadge();
+        renderCart();
+      });
+    });
+  }
+
+  cartFab.addEventListener('click', function () { cartOverlay.hidden = false; renderCart(); });
+  cartOverlay.addEventListener('click', function (e) { if (e.target === this) this.hidden = true; });
+
+  // ---------------- cliques na vitrine: variações, galeria, carrinho, menus de WhatsApp ----------------
   document.addEventListener('click', function (e) {
     var pick = e.target.closest('.variation-pick');
     if (pick) {
       var pi = parseInt(pick.getAttribute('data-pi'), 10);
+      var vi = parseInt(pick.getAttribute('data-vi'), 10);
       var label = pick.getAttribute('data-label') || '';
       selectedVariations[pi] = label;
 
@@ -826,16 +999,40 @@
       pick.classList.add('selected');
 
       var labelEl = card.querySelector('.selected-variation-label');
-      if (labelEl) labelEl.textContent = label ? ('Modelo selecionado: ' + label) : '';
+      if (labelEl) labelEl.textContent = 'Modelo selecionado: ' + label;
 
-      var fullName = PRODUCTS[pi].name + (label ? ' - ' + label : '');
-      var waDiogo = card.querySelector('[data-wa="diogo"]');
-      var waGabi = card.querySelector('[data-wa="gabi"]');
-      if (waDiogo) waDiogo.href = waLink(SITE_CONFIG.whatsappDiogo, fullName);
-      if (waGabi) waGabi.href = waLink(SITE_CONFIG.whatsappGabi, fullName);
+      var v = PRODUCTS[pi].variations[vi];
+      var vPhotos = (v && v.photos) ? v.photos : [];
+      if (vPhotos.length) openLightboxGallery(vPhotos, label);
+      return;
+    }
 
-      var photo = pick.getAttribute('data-photo');
-      if (photo) openLightbox(photo, label);
+    var gpick = e.target.closest('.gallery-pick');
+    if (gpick) {
+      var gpi = parseInt(gpick.getAttribute('data-pi'), 10);
+      var gi = parseInt(gpick.getAttribute('data-gi'), 10);
+      var photosArr = PRODUCTS[gpi].photos || [];
+      openLightboxGallery(photosArr, PRODUCTS[gpi].name, gi);
+      return;
+    }
+
+    var addBtn = e.target.closest('.cart-add');
+    if (addBtn) {
+      var api = parseInt(addBtn.getAttribute('data-pi'), 10);
+      var p = PRODUCTS[api];
+      if (p.hasVariations) {
+        var sel = selectedVariations[api];
+        if (!sel) {
+          var lbl = addBtn.closest('.product-card').querySelector('.selected-variation-label');
+          if (lbl) lbl.textContent = 'Selecione um modelo antes de adicionar ao carrinho.';
+          return;
+        }
+        addToCart(p.name, sel, p.price);
+      } else {
+        addToCart(p.name, null, p.price);
+      }
+      addBtn.textContent = 'Adicionado ✓';
+      setTimeout(function () { addBtn.innerHTML = CART_ICON + 'Adicionar ao carrinho'; }, 1200);
       return;
     }
 
@@ -862,13 +1059,14 @@
     }
   });
 
-  // ---------------- área admin (login + painel) ----------------
+  // ---------------- área admin (login + painel de 3 botões) ----------------
   var adminToggle = document.getElementById('adminToggle');
   var modalOverlay = document.getElementById('modalOverlay');
   var modalBody = document.getElementById('modalBody');
-  var pendingVariations = []; // [{ label, file }] -- variações sendo montadas no formulário
+  var pendingVariations = []; // [{ label, files:[File,File,File] }]
 
   function closeModal () { modalOverlay.hidden = true; modalBody.innerHTML = ''; pendingVariations = []; }
+  modalOverlay.addEventListener('click', function (e) { if (e.target === this) closeModal(); });
 
   function renderLoginForm () {
     modalBody.innerHTML =
@@ -891,17 +1089,38 @@
     });
   }
 
+  function renderAdminHome () {
+    modalBody.innerHTML =
+      '<h2>Painel EIXOZ</h2>' +
+      '<p style="color:var(--muted);font-size:12.5px;margin:-10px 0 18px;">' + (auth.currentUser ? auth.currentUser.email : '') + '</p>' +
+      '<button class="btn-primary" type="button" id="goProducts" style="width:100%;margin-bottom:12px;">Adicionar Produtos</button>' +
+      '<button class="btn-primary" type="button" id="goBanner" style="width:100%;margin-bottom:12px;">Adicionar fotos aos banners</button>' +
+      '<button class="btn-primary" type="button" id="goInfo" style="width:100%;margin-bottom:24px;">Alterar informações</button>' +
+      '<div class="modal-actions">' +
+        '<button class="btn-secondary" id="modalClose" type="button">Fechar</button>' +
+        '<button class="btn-secondary" id="logoutBtn" type="button">Sair</button>' +
+      '</div>';
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('logoutBtn').addEventListener('click', function () { signOut(auth); });
+    document.getElementById('goProducts').addEventListener('click', renderProductForm);
+    document.getElementById('goBanner').addEventListener('click', renderBannerForm);
+    document.getElementById('goInfo').addEventListener('click', renderInfoForm);
+  }
+
   function renderVariationsList () {
     var wrap = document.getElementById('variationsList');
     if (!wrap) return;
     wrap.innerHTML = pendingVariations.map(function (v, i) {
       return (
-        '<div class="variation-row">' +
+        '<div class="variation-row" style="flex-direction:column;align-items:stretch;">' +
           '<div class="field"><label>Variação/modelo ' + (i + 1) + '</label>' +
             '<input type="text" class="var-label" data-i="' + i + '" placeholder="Ex: Azul, Tamanho M" value="' + (v.label || '').replace(/"/g, '&quot;') + '">' +
           '</div>' +
-          '<div class="field"><label>Foto</label><input type="file" accept="image/*" class="var-file" data-i="' + i + '"></div>' +
-          '<button type="button" data-rmvar="' + i + '" title="Remover">×</button>' +
+          '<label style="font-size:12px;color:var(--muted);margin-bottom:4px;">Até 3 fotos dessa variação</label>' +
+          [0, 1, 2].map(function (s) {
+            return '<input type="file" accept="image/*" class="var-file photo-slot" data-i="' + i + '" data-slot="' + s + '">';
+          }).join('') +
+          '<button type="button" data-rmvar="' + i + '" style="align-self:flex-end;margin-top:6px;width:auto;padding:8px 14px;">× Remover variação</button>' +
         '</div>'
       );
     }).join('');
@@ -909,7 +1128,10 @@
       inp.addEventListener('input', function () { pendingVariations[parseInt(inp.dataset.i, 10)].label = inp.value; });
     });
     wrap.querySelectorAll('.var-file').forEach(function (inp) {
-      inp.addEventListener('change', function () { pendingVariations[parseInt(inp.dataset.i, 10)].file = inp.files[0] || null; });
+      inp.addEventListener('change', function () {
+        var vi = parseInt(inp.dataset.i, 10), slot = parseInt(inp.dataset.slot, 10);
+        pendingVariations[vi].files[slot] = inp.files[0] || null;
+      });
     });
     wrap.querySelectorAll('[data-rmvar]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -919,14 +1141,118 @@
     });
   }
 
-  function renderAdminPanel () {
+  function renderProductForm () {
     pendingVariations = [];
 
     var productsHtml = PRODUCTS.map(function (p, i) {
-      return '<div class="admin-product-row"><span>' + p.name + ' — ' + p.price + '</span>' +
+      return '<div class="admin-product-row"><span>' + p.name + ' — ' + p.price + (p.hasVariations ? ' (com variações)' : '') + '</span>' +
         '<button type="button" class="danger" data-del="' + i + '">Excluir</button></div>';
     }).join('') || '<p style="color:var(--muted);font-size:13px;">Nenhum produto ainda.</p>';
 
+    modalBody.innerHTML =
+      '<button type="button" class="back-link" id="adminBack">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg> Voltar ao painel' +
+      '</button>' +
+      '<h2>Produtos</h2>' +
+      productsHtml +
+      '<div class="field" style="margin-top:14px;"><label>Nome do produto</label><input id="pName" placeholder="Ex: Vaso Hexagonal"></div>' +
+      '<div class="field"><label>Preço</label><input id="pPrice" placeholder="Ex: R$ 39,90"></div>' +
+      '<div class="field"><label>Informações extras (opcional)</label><textarea id="pInfo" rows="3" placeholder="Material, tamanho, detalhes..."></textarea></div>' +
+      '<div class="field"><label class="checkbox-label"><input type="checkbox" id="pHasVar"> Esse produto tem variação (cor, tamanho, modelo)?</label></div>' +
+
+      '<div id="noVarPhotos">' +
+        '<label style="display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:6px;">Fotos do produto (até 5)</label>' +
+        [0, 1, 2, 3, 4].map(function (s) {
+          return '<input type="file" accept="image/*" class="p-photo-slot photo-slot" data-slot="' + s + '">';
+        }).join('') +
+      '</div>' +
+
+      '<div id="varSection" style="display:none;">' +
+        '<div id="variationsList"></div>' +
+        '<button type="button" class="btn-secondary" id="addVariation" style="width:100%;margin:4px 0 14px;">+ Adicionar variação/modelo</button>' +
+      '</div>' +
+
+      '<p class="error-msg" id="prodError"></p>' +
+      '<button class="btn-primary" id="pAdd" type="button" style="width:100%;margin-bottom:8px;">+ Adicionar produto</button>';
+
+    document.getElementById('adminBack').addEventListener('click', renderAdminHome);
+    document.getElementById('pHasVar').addEventListener('change', function () {
+      document.getElementById('noVarPhotos').style.display = this.checked ? 'none' : '';
+      document.getElementById('varSection').style.display = this.checked ? '' : 'none';
+    });
+    document.getElementById('addVariation').addEventListener('click', function () {
+      pendingVariations.push({ label: '', files: [null, null, null] });
+      renderVariationsList();
+    });
+    renderVariationsList();
+
+    modalBody.querySelectorAll('[data-del]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var idx = parseInt(btn.getAttribute('data-del'), 10);
+        var p = PRODUCTS[idx];
+        if (p.id) await deleteDoc(doc(db, 'products', p.id));
+        await loadSiteData();
+        renderProductForm();
+      });
+    });
+
+    document.getElementById('pAdd').addEventListener('click', async function () {
+      var name = document.getElementById('pName').value.trim();
+      var price = document.getElementById('pPrice').value.trim();
+      var info = document.getElementById('pInfo').value.trim();
+      var hasVar = document.getElementById('pHasVar').checked;
+      var errEl = document.getElementById('prodError');
+      errEl.textContent = '';
+      if (!name || !price) { errEl.textContent = 'Preencha nome e preço.'; return; }
+
+      var filesToCheck = [];
+      if (hasVar) {
+        pendingVariations.forEach(function (v) { v.files.forEach(function (f) { if (f) filesToCheck.push(f); }); });
+      } else {
+        modalBody.querySelectorAll('.p-photo-slot').forEach(function (inp) { if (inp.files[0]) filesToCheck.push(inp.files[0]); });
+      }
+      for (var c = 0; c < filesToCheck.length; c++) {
+        var ferr = fileError(filesToCheck[c]);
+        if (ferr) { errEl.textContent = ferr; return; }
+      }
+
+      var btn = document.getElementById('pAdd');
+      btn.disabled = true; btn.textContent = 'Processando fotos...';
+      try {
+        var payload = { name: name, price: price, info: info, hasVariations: hasVar, photos: [], variations: [] };
+
+        if (hasVar) {
+          for (var j = 0; j < pendingVariations.length; j++) {
+            var v = pendingVariations[j];
+            var vPhotos = [];
+            for (var s = 0; s < v.files.length; s++) {
+              if (v.files[s]) vPhotos.push(await compressImage(v.files[s], 480, 0.7));
+            }
+            payload.variations.push({ label: v.label || ('Modelo ' + (j + 1)), photos: vPhotos });
+          }
+        } else {
+          var slots = modalBody.querySelectorAll('.p-photo-slot');
+          for (var k = 0; k < slots.length; k++) {
+            if (slots[k].files[0]) payload.photos.push(await compressImage(slots[k].files[0], 700, 0.72));
+          }
+        }
+
+        if (JSON.stringify(payload).length > DOC_SAFE_LIMIT) {
+          errEl.textContent = 'Fotos grandes demais mesmo comprimidas — tente com menos fotos.';
+          btn.disabled = false; btn.textContent = '+ Adicionar produto';
+          return;
+        }
+        await addDoc(collection(db, 'products'), payload);
+        await loadSiteData();
+        renderProductForm();
+      } catch (e) {
+        errEl.textContent = 'Erro ao salvar. Confira as regras do Firestore.';
+        btn.disabled = false; btn.textContent = '+ Adicionar produto';
+      }
+    });
+  }
+
+  function renderBannerForm () {
     var bannerHtml = SITE_CONFIG.bannerImages.map(function (src, i) {
       return (
         '<div class="field">' +
@@ -938,97 +1264,15 @@
     }).join('');
 
     modalBody.innerHTML =
-      '<h2>Painel EIXOZ</h2>' +
-      '<p style="color:var(--muted);font-size:12.5px;margin:-10px 0 18px;">' + (auth.currentUser ? auth.currentUser.email : '') + '</p>' +
-
-      '<h3>Produtos</h3>' +
-      productsHtml +
-      '<div class="field" style="margin-top:14px;"><label>Nome do produto</label><input id="pName" placeholder="Ex: Vaso Hexagonal"></div>' +
-      '<div class="field"><label>Preço</label><input id="pPrice" placeholder="Ex: R$ 39,90"></div>' +
-      '<div class="field"><label>Foto principal (do celular)</label><input type="file" id="pMediaFile" accept="image/*"></div>' +
-      '<div id="variationsList"></div>' +
-      '<button type="button" class="btn-secondary" id="addVariation" style="width:100%;margin:4px 0 14px;">+ Adicionar variação/modelo</button>' +
-      '<p class="error-msg" id="prodError"></p>' +
-      '<button class="btn-primary" id="pAdd" type="button" style="width:100%;margin-bottom:28px;">+ Adicionar produto</button>' +
-
-      '<h3>Banner (5 imagens)</h3>' +
+      '<button type="button" class="back-link" id="adminBack">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg> Voltar ao painel' +
+      '</button>' +
+      '<h2>Fotos do banner</h2>' +
       bannerHtml +
       '<p class="error-msg" id="bannerError"></p>' +
-      '<button class="btn-primary" id="bannerSave" type="button" style="width:100%;margin-bottom:28px;">Salvar banner</button>' +
+      '<button class="btn-primary" id="bannerSave" type="button" style="width:100%;">Salvar banner</button>';
 
-      '<h3>Links</h3>' +
-      '<div class="field"><label>Instagram (URL)</label><input id="cfgInsta" value="' + SITE_CONFIG.instagramUrl + '"></div>' +
-      '<div class="field"><label>WhatsApp Diogo (DDI+DDD+número, só números)</label><input id="cfgWaDiogo" value="' + SITE_CONFIG.whatsappDiogo + '"></div>' +
-      '<div class="field"><label>WhatsApp Gabi (DDI+DDD+número, só números)</label><input id="cfgWaGabi" value="' + SITE_CONFIG.whatsappGabi + '"></div>' +
-      '<p class="error-msg" id="cfgError"></p>' +
-      '<button class="btn-primary" id="cfgSave" type="button" style="width:100%;">Salvar links</button>' +
-
-      '<div class="modal-actions" style="margin-top:24px;">' +
-        '<button class="btn-secondary" id="modalClose" type="button">Fechar</button>' +
-        '<button class="btn-secondary" id="logoutBtn" type="button">Sair</button>' +
-      '</div>';
-
-    renderVariationsList();
-
-    document.getElementById('modalClose').addEventListener('click', closeModal);
-    document.getElementById('logoutBtn').addEventListener('click', function () { signOut(auth); });
-    document.getElementById('addVariation').addEventListener('click', function () {
-      pendingVariations.push({ label: '', file: null });
-      renderVariationsList();
-    });
-
-    modalBody.querySelectorAll('[data-del]').forEach(function (btn) {
-      btn.addEventListener('click', async function () {
-        var idx = parseInt(btn.getAttribute('data-del'), 10);
-        var p = PRODUCTS[idx];
-        if (p.id) await deleteDoc(doc(db, 'products', p.id));
-        await loadSiteData();
-        renderAdminPanel();
-      });
-    });
-
-    // -------- adicionar produto (foto comprimida e salva direto no Firestore) --------
-    document.getElementById('pAdd').addEventListener('click', async function () {
-      var name = document.getElementById('pName').value.trim();
-      var price = document.getElementById('pPrice').value.trim();
-      var errEl = document.getElementById('prodError');
-      errEl.textContent = '';
-      if (!name || !price) { errEl.textContent = 'Preencha nome e preço.'; return; }
-
-      var mediaFile = document.getElementById('pMediaFile').files[0] || null;
-      var mErr = fileError(mediaFile);
-      if (mErr) { errEl.textContent = mErr; return; }
-      for (var k = 0; k < pendingVariations.length; k++) {
-        var vErr = fileError(pendingVariations[k].file);
-        if (vErr) { errEl.textContent = 'Variação ' + (k + 1) + ': ' + vErr; return; }
-      }
-
-      var btn = document.getElementById('pAdd');
-      btn.disabled = true; btn.textContent = 'Processando fotos...';
-      try {
-        var photo = mediaFile ? await compressImage(mediaFile, 700, 0.72) : null;
-        var variations = [];
-        for (var j = 0; j < pendingVariations.length; j++) {
-          var v = pendingVariations[j];
-          var vPhoto = v.file ? await compressImage(v.file, 480, 0.7) : null;
-          variations.push({ label: v.label || ('Modelo ' + (j + 1)), photo: vPhoto });
-        }
-        var payload = { name: name, price: price, photo: photo, variations: variations };
-        if (JSON.stringify(payload).length > DOC_SAFE_LIMIT) {
-          errEl.textContent = 'Fotos grandes demais mesmo comprimidas — tente com menos fotos ou fotos mais simples.';
-          btn.disabled = false; btn.textContent = '+ Adicionar produto';
-          return;
-        }
-        await addDoc(collection(db, 'products'), payload);
-        await loadSiteData();
-        renderAdminPanel();
-      } catch (e) {
-        errEl.textContent = 'Erro ao salvar. Confira as regras do Firestore.';
-        btn.disabled = false; btn.textContent = '+ Adicionar produto';
-      }
-    });
-
-    // -------- salvar banner (fotos comprimidas, salvas no documento config/site) --------
+    document.getElementById('adminBack').addEventListener('click', renderAdminHome);
     document.getElementById('bannerSave').addEventListener('click', async function () {
       var errEl = document.getElementById('bannerError');
       errEl.textContent = '';
@@ -1038,7 +1282,7 @@
         if (bErr) { errEl.textContent = 'Imagem ' + (x + 1) + ': ' + bErr; return; }
       }
       var btn2 = document.getElementById('bannerSave');
-      btn2.disabled = true; btn2.textContent = 'Processando fotos...';
+      btn2.disabled = true; btn2.textContent = 'Enviando...';
       try {
         var newImages = SITE_CONFIG.bannerImages.slice();
         for (var y = 0; y < fileInputs.length; y++) {
@@ -1048,45 +1292,63 @@
           newImages[idx] = await compressImage(f, 640, 0.65);
         }
         if (JSON.stringify(newImages).length > DOC_SAFE_LIMIT) {
-          errEl.textContent = 'Fotos grandes demais mesmo comprimidas — tente trocar menos imagens por vez.';
+          errEl.textContent = 'Fotos grandes demais mesmo comprimidas — troque menos imagens por vez.';
           btn2.disabled = false; btn2.textContent = 'Salvar banner';
           return;
         }
         await setDoc(doc(db, 'config', 'site'), { bannerImages: newImages }, { merge: true });
         await loadSiteData();
-        renderAdminPanel();
+        renderBannerForm();
       } catch (e) {
         errEl.textContent = 'Erro ao salvar. Confira as regras do Firestore.';
         btn2.disabled = false; btn2.textContent = 'Salvar banner';
       }
     });
+  }
 
+  function renderInfoForm () {
+    modalBody.innerHTML =
+      '<button type="button" class="back-link" id="adminBack">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg> Voltar ao painel' +
+      '</button>' +
+      '<h2>Informações</h2>' +
+      '<div class="field"><label>Instagram (URL)</label><input id="cfgInsta" value="' + SITE_CONFIG.instagramUrl + '"></div>' +
+      '<div class="field"><label>Nome — contato 1</label><input id="cfgNameDiogo" value="' + SITE_CONFIG.nameDiogo + '"></div>' +
+      '<div class="field"><label>WhatsApp — contato 1 (DDI+DDD+número, só números)</label><input id="cfgWaDiogo" value="' + SITE_CONFIG.whatsappDiogo + '"></div>' +
+      '<div class="field"><label>Nome — contato 2</label><input id="cfgNameGabi" value="' + SITE_CONFIG.nameGabi + '"></div>' +
+      '<div class="field"><label>WhatsApp — contato 2 (DDI+DDD+número, só números)</label><input id="cfgWaGabi" value="' + SITE_CONFIG.whatsappGabi + '"></div>' +
+      '<p class="error-msg" id="cfgError"></p>' +
+      '<button class="btn-primary" id="cfgSave" type="button" style="width:100%;">Salvar</button>';
+
+    document.getElementById('adminBack').addEventListener('click', renderAdminHome);
     document.getElementById('cfgSave').addEventListener('click', async function () {
       var data = {
         instagramUrl: document.getElementById('cfgInsta').value.trim(),
+        nameDiogo: document.getElementById('cfgNameDiogo').value.trim() || 'Diogo',
         whatsappDiogo: document.getElementById('cfgWaDiogo').value.trim(),
+        nameGabi: document.getElementById('cfgNameGabi').value.trim() || 'Gabi',
         whatsappGabi: document.getElementById('cfgWaGabi').value.trim(),
         bannerImages: SITE_CONFIG.bannerImages
       };
-      var errEl2 = document.getElementById('cfgError');
+      var errEl = document.getElementById('cfgError');
       try {
         await setDoc(doc(db, 'config', 'site'), data, { merge: true });
         await loadSiteData();
-        renderAdminPanel();
+        renderInfoForm();
       } catch (e) {
-        errEl2.textContent = 'Erro ao salvar. Confira as regras do Firestore.';
+        errEl.textContent = 'Erro ao salvar. Confira as regras do Firestore.';
       }
     });
   }
 
   adminToggle.addEventListener('click', function () {
     modalOverlay.hidden = false;
-    if (auth.currentUser) renderAdminPanel(); else renderLoginForm();
+    if (auth.currentUser) renderAdminHome(); else renderLoginForm();
   });
 
   onAuthStateChanged(auth, function (user) {
     if (!modalOverlay.hidden) {
-      if (user) renderAdminPanel(); else renderLoginForm();
+      if (user) renderAdminHome(); else renderLoginForm();
     }
   });
 
