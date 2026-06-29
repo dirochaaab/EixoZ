@@ -270,7 +270,7 @@
   .cta-menu-item:hover, .cta-menu-item:focus-visible{ background:rgba(255,255,255,.07); }
   .cta-menu-item .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
   .contact-avatar{
-    width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;
+    width:52px; height:52px; border-radius:50%; object-fit:cover; flex-shrink:0;
     border:2px solid rgba(255,255,255,.18);
   }
   .admin-avatar-preview{ width:64px; height:64px; border-radius:50%; object-fit:cover; display:block; margin-bottom:8px; }
@@ -328,7 +328,17 @@
     color:var(--muted); font-size:12px; font-weight:600;
   }
   .product-card .photo-placeholder svg{ width:30px; height:30px; opacity:.7; }
+  .product-media{ position:relative; }
   .product-main-photo{ cursor:zoom-in; }
+  .media-nav{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:30px; height:30px; border-radius:50%;
+    background:rgba(0,0,0,.45); border:none; color:#fff;
+    font-size:18px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .media-prev{ left:8px; }
+  .media-next{ right:8px; }
   .is-hidden{ display:none !important; }
   .category-filters{ display:flex; gap:8px; flex-wrap:wrap; margin:24px 0 4px; }
   .category-pill{
@@ -592,12 +602,12 @@
           <a class="cta-menu-item" role="menuitem" id="mainWaDiogo" href="#" target="_blank" rel="noopener">
             <span class="dot" id="mainWaDiogoDot" style="background:var(--cyan)"></span>
             <img class="contact-avatar is-hidden" id="mainWaDiogoAvatar" src="" alt="">
-            Chamar <span id="mainWaDiogoName">Diogo</span>
+            <span id="mainWaDiogoName">Diogo</span>
           </a>
           <a class="cta-menu-item" role="menuitem" id="mainWaGabi" href="#" target="_blank" rel="noopener">
             <span class="dot" id="mainWaGabiDot" style="background:var(--pink)"></span>
             <img class="contact-avatar is-hidden" id="mainWaGabiAvatar" src="" alt="">
-            Chamar <span id="mainWaGabiName">Gabi</span>
+            <span id="mainWaGabiName">Gabi</span>
           </a>
         </div>
       </div>
@@ -828,17 +838,43 @@
 
   // ---------------- produtos (vitrine pública) ----------------
   var selectedVariations = []; // selectedVariations[i] = label escolhido (ou null), paralelo a PRODUCTS
+  var mainPhotoIndex = []; // mainPhotoIndex[i] = índice da foto atualmente exibida na imagem grande
+
+  function getCurrentGallery (pi) {
+    var p = PRODUCTS[pi];
+    if (!p) return [];
+    if (p.hasVariations) {
+      var sel = selectedVariations[pi];
+      if (sel) {
+        var v = p.variations.find(function (vv) { return vv.label === sel; });
+        return (v && v.photos) ? v.photos : [];
+      }
+      return p.coverPhoto ? [p.coverPhoto] : [];
+    }
+    return p.photos || [];
+  }
+
+  function refreshMediaNav (card, pi) {
+    var gallery = getCurrentGallery(pi);
+    var multi = gallery.length > 1;
+    card.querySelectorAll('.media-nav').forEach(function (btn) { btn.classList.toggle('is-hidden', !multi); });
+  }
 
   function renderProducts () {
     selectedVariations = PRODUCTS.map(function () { return null; });
+    mainPhotoIndex = PRODUCTS.map(function () { return 0; });
     var grid = document.getElementById('productsGrid');
     grid.innerHTML = PRODUCTS.map(function (p, i) {
       var photosArr = (p.photos && p.photos.length) ? p.photos : [];
       var defaultCover = p.hasVariations ? (p.coverPhoto || null) : (photosArr[0] || null);
+      var initialGallery = p.hasVariations ? (p.coverPhoto ? [p.coverPhoto] : []) : photosArr;
+      var showNav = initialGallery.length > 1;
       var mediaHtml =
         '<div class="product-media">' +
           '<img class="photo product-main-photo' + (defaultCover ? '' : ' is-hidden') + '" data-pi="' + i + '" src="' + (defaultCover || '') + '" alt="' + p.name + '">' +
           '<div class="photo-placeholder' + (defaultCover ? ' is-hidden' : '') + '">' + CAMERA_ICON + '<span>Foto do produto</span></div>' +
+          '<button type="button" class="media-nav media-prev' + (showNav ? '' : ' is-hidden') + '" data-pi="' + i + '" aria-label="Foto anterior">‹</button>' +
+          '<button type="button" class="media-nav media-next' + (showNav ? '' : ' is-hidden') + '" data-pi="' + i + '" aria-label="Próxima foto">›</button>' +
         '</div>';
 
       var galleryHtml = '';
@@ -1042,8 +1078,8 @@
       '<div class="cta-wrap" style="margin-top:22px;position:relative;">' +
         '<button class="cta" type="button" id="cartCheckout" aria-haspopup="true" aria-expanded="false" aria-controls="cartMenu"' + (cart.length ? '' : ' disabled') + '>' + WA_ICON + 'Chamar no WhatsApp</button>' +
         '<div class="cta-menu" id="cartMenu" role="menu" hidden>' +
-          '<a class="cta-menu-item" role="menuitem" id="cartWaDiogo" target="_blank" rel="noopener">' + (SITE_CONFIG.photoDiogo ? '<img class="contact-avatar" src="' + SITE_CONFIG.photoDiogo + '" alt="">' : '<span class="dot" style="background:var(--cyan)"></span>') + ' Chamar ' + SITE_CONFIG.nameDiogo + '</a>' +
-          '<a class="cta-menu-item" role="menuitem" id="cartWaGabi" target="_blank" rel="noopener">' + (SITE_CONFIG.photoGabi ? '<img class="contact-avatar" src="' + SITE_CONFIG.photoGabi + '" alt="">' : '<span class="dot" style="background:var(--pink)"></span>') + ' Chamar ' + SITE_CONFIG.nameGabi + '</a>' +
+          '<a class="cta-menu-item" role="menuitem" id="cartWaDiogo" target="_blank" rel="noopener">' + (SITE_CONFIG.photoDiogo ? '<img class="contact-avatar" src="' + SITE_CONFIG.photoDiogo + '" alt="">' : '<span class="dot" style="background:var(--cyan)"></span>') + ' ' + SITE_CONFIG.nameDiogo + '</a>' +
+          '<a class="cta-menu-item" role="menuitem" id="cartWaGabi" target="_blank" rel="noopener">' + (SITE_CONFIG.photoGabi ? '<img class="contact-avatar" src="' + SITE_CONFIG.photoGabi + '" alt="">' : '<span class="dot" style="background:var(--pink)"></span>') + ' ' + SITE_CONFIG.nameGabi + '</a>' +
         '</div>' +
       '</div>' +
       '<div class="modal-actions" style="margin-top:18px;"><button class="btn-secondary" id="cartClose" type="button" style="width:100%;">Fechar</button></div>';
@@ -1082,12 +1118,29 @@
   }
 
   document.addEventListener('click', function (e) {
+    var navBtn = e.target.closest('.media-nav');
+    if (navBtn) {
+      var npi = parseInt(navBtn.getAttribute('data-pi'), 10);
+      var gallery0 = getCurrentGallery(npi);
+      if (gallery0.length > 1) {
+        var dir = navBtn.classList.contains('media-next') ? 1 : -1;
+        mainPhotoIndex[npi] = ((mainPhotoIndex[npi] || 0) + dir + gallery0.length) % gallery0.length;
+        var navCard = navBtn.closest('.product-card');
+        setMainPhoto(navCard, gallery0[mainPhotoIndex[npi]]);
+        if (!PRODUCTS[npi].hasVariations) {
+          navCard.querySelectorAll('.gallery-pick').forEach(function (el, idx) { el.classList.toggle('selected', idx === mainPhotoIndex[npi]); });
+        }
+      }
+      return;
+    }
+
     var pick = e.target.closest('.variation-pick');
     if (pick) {
       var pi = parseInt(pick.getAttribute('data-pi'), 10);
       var vi = parseInt(pick.getAttribute('data-vi'), 10);
       var label = pick.getAttribute('data-label') || '';
       selectedVariations[pi] = label;
+      mainPhotoIndex[pi] = 0;
 
       var card = pick.closest('.product-card');
       card.querySelectorAll('.variation-pick').forEach(function (el) { el.classList.remove('selected'); });
@@ -1099,6 +1152,7 @@
       var v = PRODUCTS[pi].variations[vi];
       var vPhotos = (v && v.photos) ? v.photos : [];
       setMainPhoto(card, vPhotos[0] || null);
+      refreshMediaNav(card, pi);
       return;
     }
 
@@ -1106,10 +1160,12 @@
     if (gpick) {
       var gpi = parseInt(gpick.getAttribute('data-pi'), 10);
       var gi = parseInt(gpick.getAttribute('data-gi'), 10);
+      mainPhotoIndex[gpi] = gi;
       var card2 = gpick.closest('.product-card');
       card2.querySelectorAll('.gallery-pick').forEach(function (el) { el.classList.remove('selected'); });
       gpick.classList.add('selected');
       setMainPhoto(card2, PRODUCTS[gpi].photos[gi] || null);
+      refreshMediaNav(card2, gpi);
       return;
     }
 
@@ -1117,22 +1173,9 @@
     if (mainPhoto && !mainPhoto.classList.contains('is-hidden')) {
       var zpi = parseInt(mainPhoto.getAttribute('data-pi'), 10);
       var zp = PRODUCTS[zpi];
-      var gallery, caption;
-      if (zp.hasVariations) {
-        var selLabel = selectedVariations[zpi];
-        if (selLabel) {
-          var zv = zp.variations.find(function (vv) { return vv.label === selLabel; });
-          gallery = (zv && zv.photos) ? zv.photos : [];
-          caption = selLabel;
-        } else {
-          gallery = zp.coverPhoto ? [zp.coverPhoto] : [];
-          caption = zp.name;
-        }
-      } else {
-        gallery = zp.photos || [];
-        caption = zp.name;
-      }
-      openLightboxGallery(gallery, caption);
+      var gallery = getCurrentGallery(zpi);
+      var caption = (zp.hasVariations && selectedVariations[zpi]) ? selectedVariations[zpi] : zp.name;
+      openLightboxGallery(gallery, caption, mainPhotoIndex[zpi] || 0);
       return;
     }
 
@@ -1292,13 +1335,16 @@
 
   function renderProductForm (editProduct) {
     editingProductId = editProduct ? editProduct.id : null;
-    pendingVariations = editProduct && editProduct.hasVariations
+    // Carrega os dois conjuntos de fotos a partir do produto existente, independente do
+    // estado atual de "tem variação" — assim, se você marcar/desmarcar o checkbox durante
+    // a edição, as fotos que já existiam continuam disponíveis e não somem.
+    pendingVariations = editProduct
       ? editProduct.variations.map(function (v) {
           var existing = [v.photos[0] || null, v.photos[1] || null, v.photos[2] || null];
           return { label: v.label || '', existingPhotos: existing, files: [null, null, null], removeFlags: [false, false, false] };
         })
       : [];
-    pendingPhotoSlots = editProduct && !editProduct.hasVariations
+    pendingPhotoSlots = editProduct
       ? [0, 1, 2, 3, 4].map(function (s) { return editProduct.photos[s] || null; })
       : [null, null, null, null, null];
 
