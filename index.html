@@ -469,15 +469,22 @@
   .btn-primary{ flex:1; border:none; background:var(--gradient); color:#fff; }
   .btn-secondary{ border:1px solid var(--border); background:transparent; color:var(--ink); }
   .admin-product-row{
-    display:flex; align-items:center; gap:10px; padding:10px 0;
+    display:flex; align-items:center; gap:10px; padding:10px 0; flex-wrap:wrap;
     border-bottom:1px solid var(--border); font-size:13.5px;
   }
-  .admin-product-row span{ flex:1; }
+  .admin-product-row span{ flex:1 1 100%; }
   .admin-product-row button{
     background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; font-family:inherit;
   }
   .admin-product-row button.danger{ color:var(--pink); }
+  .admin-product-row button.link-btn{ color:var(--cyan); }
+  .admin-product-row button:disabled{ color:#475569; cursor:not-allowed; }
   .error-msg{ color:var(--pink); font-size:13px; margin:8px 0 0; min-height:16px; }
+  @keyframes linkedPulse{
+    0%, 100% { box-shadow:0 0 0 0 rgba(0,229,255,0); }
+    50% { box-shadow:0 0 0 6px rgba(0,229,255,.35); }
+  }
+  .linked-highlight{ animation:linkedPulse 1.3s ease-in-out 2; border-radius:18px; }
 </style>
 </head>
 <body>
@@ -708,6 +715,33 @@
 
   function waLink (number, text) { return 'https://wa.me/' + number + '?text=' + encodeURIComponent(text); }
 
+  function buildProductUrl (productId) {
+    return window.location.origin + window.location.pathname + '?produto=' + encodeURIComponent(productId);
+  }
+
+  function copyTextToClipboard (text, btn) {
+    var original = btn.textContent;
+    function showCopied () {
+      btn.textContent = 'Copiado!';
+      setTimeout(function () { btn.textContent = original; }, 1600);
+    }
+    function fallback () {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      try { document.execCommand('copy'); showCopied(); } catch (e) { btn.textContent = 'Copie manualmente'; }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showCopied).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+
   function parsePrice (str) {
     if (!str) return 0;
     var cleaned = String(str).replace(/[^\d,.]/g, '');
@@ -901,7 +935,7 @@
       var infoHtml = p.info ? '<p class="product-extra-info">' + p.info + '</p>' : '';
 
       return (
-        '<div class="product-card" data-category="' + (p.category || '').replace(/"/g, '&quot;') + '">' +
+        '<div class="product-card" data-category="' + (p.category || '').replace(/"/g, '&quot;') + '" data-product-id="' + (p.id || '') + '">' +
           mediaHtml +
           '<div class="info">' +
             '<h3>' + p.name + '</h3>' +
@@ -1351,10 +1385,16 @@
     var productsHtml = PRODUCTS.map(function (p, i) {
       return '<div class="admin-product-row"><span>' + p.name + ' — ' + p.price + (p.category ? ' · ' + p.category : '') + (p.hasVariations ? ' (com variações)' : '') + '</span>' +
         '<button type="button" data-edit="' + i + '">Editar</button>' +
+        '<button type="button" class="link-btn copy-link-btn" data-link-id="' + (p.id || '') + '"' + (p.id ? '' : ' disabled title="Salve o produto primeiro"') + '>Link</button>' +
         '<button type="button" class="danger" data-del="' + i + '">Excluir</button></div>';
     }).join('') || '<p style="color:var(--muted);font-size:13px;">Nenhum produto ainda.</p>';
 
-    var categoryOptions = getCategories().map(function (c) { return '<option value="' + c.replace(/"/g, '&quot;') + '">'; }).join('');
+    var categoryOptionsHtml = getCategories().map(function (c) {
+      var safe = c.replace(/"/g, '&quot;');
+      var isSelected = editProduct && editProduct.category === c;
+      return '<option value="' + safe + '"' + (isSelected ? ' selected' : '') + '>' + c + '</option>';
+    }).join('');
+    var hasMatchingCategory = !editProduct || !editProduct.category || getCategories().indexOf(editProduct.category) !== -1;
 
     modalBody.innerHTML =
       '<button type="button" class="back-link" id="adminBack">' +
@@ -1363,9 +1403,17 @@
       '<h2>Produtos</h2>' +
       productsHtml +
       (editingProductId ? '<p style="color:var(--cyan);font-size:13px;font-weight:700;margin-top:14px;">Editando "' + editProduct.name + '"</p>' : '') +
+      (editingProductId ? '<div class="field"><label>Link direto deste produto (use no Instagram)</label><div style="display:flex;gap:8px;"><input id="pDirectLink" readonly value="' + buildProductUrl(editingProductId) + '" style="flex:1;min-width:0;"><button type="button" class="btn-secondary copy-link-btn" data-link-id="' + editingProductId + '" style="width:auto;padding:0 16px;white-space:nowrap;">Copiar</button></div></div>' : '') +
       '<div class="field" style="margin-top:10px;"><label>Nome do produto</label><input id="pName" placeholder="Ex: Vaso Hexagonal" value="' + (editProduct ? editProduct.name.replace(/"/g, '&quot;') : '') + '"></div>' +
       '<div class="field"><label>Preço</label><input id="pPrice" placeholder="Ex: R$ 39,90" value="' + (editProduct ? editProduct.price.replace(/"/g, '&quot;') : '') + '"></div>' +
-      '<div class="field"><label>Categoria (opcional)</label><input id="pCategory" list="categoryOptions" placeholder="Ex: Decoração" value="' + (editProduct ? (editProduct.category || '').replace(/"/g, '&quot;') : '') + '"><datalist id="categoryOptions">' + categoryOptions + '</datalist></div>' +
+      '<div class="field"><label>Categoria (opcional)</label>' +
+        '<select id="pCategorySelect">' +
+          '<option value="">Sem categoria</option>' +
+          categoryOptionsHtml +
+          '<option value="__new__">+ Nova categoria...</option>' +
+        '</select>' +
+        '<input id="pCategoryNew" type="text" placeholder="Nome da nova categoria" style="margin-top:8px;' + (hasMatchingCategory ? 'display:none;' : '') + '">' +
+      '</div>' +
       '<div class="field"><label>Informações extras (opcional)</label><textarea id="pInfo" rows="3" placeholder="Material, tamanho, detalhes...">' + (editProduct ? editProduct.info : '') + '</textarea></div>' +
       '<div class="field"><label class="checkbox-label"><input type="checkbox" id="pHasVar"' + (editProduct && editProduct.hasVariations ? ' checked' : '') + '> Esse produto tem variação (cor, tamanho, modelo)?</label></div>' +
 
@@ -1395,6 +1443,11 @@
       document.getElementById('noVarPhotos').style.display = this.checked ? 'none' : '';
       document.getElementById('varSection').style.display = this.checked ? '' : 'none';
     });
+    document.getElementById('pCategorySelect').addEventListener('change', function () {
+      var newInput = document.getElementById('pCategoryNew');
+      if (this.value === '__new__') { newInput.style.display = ''; newInput.value = ''; newInput.focus(); }
+      else { newInput.style.display = 'none'; newInput.value = ''; }
+    });
     document.getElementById('addVariation').addEventListener('click', function () {
       pendingVariations.push({ label: '', existingPhotos: [null, null, null], files: [null, null, null], removeFlags: [false, false, false] });
       renderVariationsList();
@@ -1402,6 +1455,13 @@
     if (document.getElementById('pCancelEdit')) {
       document.getElementById('pCancelEdit').addEventListener('click', function () { renderProductForm(); });
     }
+    modalBody.querySelectorAll('.copy-link-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pid = btn.getAttribute('data-link-id');
+        if (!pid) return;
+        copyTextToClipboard(buildProductUrl(pid), btn);
+      });
+    });
 
     modalBody.querySelectorAll('[data-del]').forEach(function (btn) {
       btn.addEventListener('click', async function () {
@@ -1422,7 +1482,8 @@
     document.getElementById('pAdd').addEventListener('click', async function () {
       var name = document.getElementById('pName').value.trim();
       var price = document.getElementById('pPrice').value.trim();
-      var category = document.getElementById('pCategory').value.trim();
+      var categorySelectVal = document.getElementById('pCategorySelect').value;
+      var category = categorySelectVal === '__new__' ? document.getElementById('pCategoryNew').value.trim() : categorySelectVal;
       var info = document.getElementById('pInfo').value.trim();
       var hasVar = document.getElementById('pHasVar').checked;
       var errEl = document.getElementById('prodError');
@@ -1614,7 +1675,30 @@
     }
   });
 
-  loadSiteData();
+  // ---------------- link direto de produto (?produto=ID), usado em Instagram/redes sociais ----------------
+  function handleDeepLinkProduct () {
+    var params = new URLSearchParams(window.location.search);
+    var pid = params.get('produto');
+    if (!pid) return;
+    var exists = PRODUCTS.some(function (p) { return p.id === pid; });
+    if (!exists) return;
+
+    homeView.hidden = true;
+    catalogoView.hidden = false;
+
+    setTimeout(function () {
+      var cards = document.querySelectorAll('.product-card');
+      var target = null;
+      cards.forEach(function (c) { if (c.getAttribute('data-product-id') === pid) target = c; });
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.classList.add('linked-highlight');
+        setTimeout(function () { target.classList.remove('linked-highlight'); }, 2600);
+      }
+    }, 80);
+  }
+
+  loadSiteData().then(handleDeepLinkProduct);
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     document.querySelectorAll('animateMotion').forEach(function (el) { el.setAttribute('repeatCount', '0'); });
