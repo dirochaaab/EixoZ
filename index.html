@@ -69,13 +69,29 @@
   .btn-ember:hover{background:oklch(0.62 0.24 25 / .2)}
 
   /* WhatsApp contact buttons */
-  .wa-contacts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:0;max-height:0;opacity:0;overflow:hidden;transition:max-height .5s ease, opacity .4s ease .05s, margin .5s ease}
-  .wa-contacts.show{max-height:200px;opacity:1;margin:28px 0 8px}
-  .wa-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;border:1px solid oklch(0.72 0.19 235 / .4);background:oklch(0.72 0.19 235 / .08);color:var(--primary);transition:all .2s}
-  .wa-btn:hover{background:oklch(0.72 0.19 235 / .18);box-shadow:var(--shadow-neon)}
-  .wa-btn svg{width:15px;height:15px;fill:currentColor;flex:none}
-  .wa-btn .wa-avatar{width:22px;height:22px;border-radius:50%;object-fit:cover;flex:none}
-  .wa-btn .wa-dot{width:7px;height:7px;border-radius:50%;background:var(--primary);flex:none}
+  .wa-contacts{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin:0;max-height:0;opacity:0;overflow:hidden;transition:max-height .5s ease, opacity .4s ease .05s, margin .5s ease}
+  .wa-contacts.show{max-height:220px;opacity:1;margin:28px 0 8px}
+
+  .wa-card{position:relative;display:inline-flex;align-items:center;gap:14px;padding:8px 20px 8px 8px;border-radius:14px;background:linear-gradient(145deg, var(--card), var(--secondary));border:1px solid oklch(0.72 0.19 235 / .35);transition:all .2s}
+  .wa-card:hover{border-color:var(--primary);box-shadow:var(--shadow-neon);transform:translateY(-2px)}
+
+  .wa-frame{position:relative;width:60px;height:60px;flex:none;padding:3px;
+    clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background:linear-gradient(135deg, var(--primary), var(--accent));
+  }
+  .wa-frame-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--secondary);
+    clip-path:polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  }
+  .wa-avatar{width:100%;height:100%;object-fit:cover;display:block}
+  .wa-placeholder{width:60%;height:60%;color:var(--primary);opacity:.7;display:flex;align-items:center;justify-content:center}
+  .wa-placeholder svg{width:100%;height:100%}
+
+  .wa-status{position:absolute;left:44px;top:38px;width:20px;height:20px;background:#25D366;border-radius:50%;border:2px solid var(--card);display:flex;align-items:center;justify-content:center;box-shadow:0 0 8px oklch(0.72 0.2 155 / .6)}
+  .wa-status svg{width:11px;height:11px}
+
+  .wa-card-info{display:flex;flex-direction:column;gap:3px}
+  .wa-card-name{font-family:"Orbitron";font-size:13.5px;font-weight:700;color:var(--foreground);letter-spacing:.03em}
+  .wa-card-sub{font-size:9.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--primary)}
   .is-hidden{display:none !important}
 
   /* Admin modal */
@@ -107,6 +123,33 @@
   .variation-row{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px}
   .category-pill{border:1px solid var(--border);background:var(--secondary);color:var(--muted-foreground);padding:6px 14px;border-radius:999px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer}
   .category-pill.active{border-color:var(--primary);color:var(--primary);background:oklch(0.72 0.19 235 / .1)}
+
+  /* Cart */
+  .cart-fab{
+    position:fixed;bottom:24px;right:24px;z-index:150;
+    width:56px;height:56px;border-radius:50%;
+    background:linear-gradient(160deg, var(--card), var(--secondary));
+    border:1px solid oklch(0.72 0.19 235 / .4);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;padding:0;
+    box-shadow:0 4px 16px oklch(0.05 0.02 260 / .5);
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .cart-fab:hover{transform:translateY(-3px);border-color:var(--primary);box-shadow:var(--shadow-neon)}
+  .cart-fab:active{transform:translateY(-1px) scale(.96)}
+  .cart-fab-icon{width:23px;height:23px;color:var(--primary);filter:drop-shadow(0 0 3px oklch(0.72 0.19 235 / .6))}
+  .cart-count{
+    position:absolute;top:-3px;right:-3px;
+    min-width:20px;height:20px;padding:0 5px;border-radius:999px;
+    background:var(--accent);
+    color:#fff;font-family:"Orbitron";font-size:10.5px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 8px oklch(0.63 0.24 25 / .7);
+    border:1.5px solid oklch(0.09 0.02 260);
+    animation:cart-badge-pop .35s ease;
+  }
+  @keyframes cart-badge-pop{0%{transform:scale(0)}65%{transform:scale(1.2)}100%{transform:scale(1)}}
+  .var-select{width:100%;margin-top:8px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--foreground);font-size:12px}
 
   /* Hero */
   .hero{display:grid;gap:40px;align-items:center;padding:8px 0 96px;grid-template-columns:1fr}
@@ -347,17 +390,35 @@
     </div>
   </div>
   <div class="wa-contacts" id="waContacts">
-    <a href="#" id="waContact1" class="wa-btn" target="_blank" rel="noopener">
-      <img class="wa-avatar is-hidden" id="waAvatar1" alt="" />
-      <span class="wa-dot" id="waDot1"></span>
-      <svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.9-.5-1.8-1.1-2.5-1.9-.6-.7-1.1-1.4-1.6-2.2-.1-.2 0-.4.1-.5.2-.2.5-.5.6-.7.1-.2.2-.4.1-.6-.1-.2-.7-1.7-1-2.3-.2-.5-.5-.4-.7-.4-.6 0-1 .1-1.4.5-1.4 1.4-1.4 3.2.1 5.1 1.6 2.1 3.2 3.4 5.7 4.3 2 .7 2.9.4 3.5-.1.5-.5.9-1.4.7-1.9-.1-.2-.3-.4-.4-.5Z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.2-1.3c1.4.8 3.1 1.3 4.8 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3C4 14.9 3.6 13.5 3.6 12c0-4.6 3.8-8.4 8.4-8.4s8.4 3.8 8.4 8.4-3.8 8.4-8.4 8.4Z"/></svg>
-      <span id="waName1">WhatsApp</span>
+    <a href="#" id="waContact1" class="wa-card" target="_blank" rel="noopener">
+      <span class="wa-frame">
+        <span class="wa-frame-inner">
+          <img class="wa-avatar is-hidden" id="waAvatar1" alt="" />
+          <span class="wa-placeholder" id="waPlaceholder1">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+          </span>
+        </span>
+      </span>
+      <span class="wa-status"><svg viewBox="0 0 24 24" fill="#fff"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.9-.5-1.8-1.1-2.5-1.9-.6-.7-1.1-1.4-1.6-2.2-.1-.2 0-.4.1-.5.2-.2.5-.5.6-.7.1-.2.2-.4.1-.6-.1-.2-.7-1.7-1-2.3-.2-.5-.5-.4-.7-.4-.6 0-1 .1-1.4.5-1.4 1.4-1.4 3.2.1 5.1 1.6 2.1 3.2 3.4 5.7 4.3 2 .7 2.9.4 3.5-.1.5-.5.9-1.4.7-1.9-.1-.2-.3-.4-.4-.5Z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.2-1.3c1.4.8 3.1 1.3 4.8 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3C4 14.9 3.6 13.5 3.6 12c0-4.6 3.8-8.4 8.4-8.4s8.4 3.8 8.4 8.4-3.8 8.4-8.4 8.4Z"/></svg></span>
+      <span class="wa-card-info">
+        <span class="wa-card-name" id="waName1">WhatsApp</span>
+        <span class="wa-card-sub">Chamar no WhatsApp</span>
+      </span>
     </a>
-    <a href="#" id="waContact2" class="wa-btn" target="_blank" rel="noopener">
-      <img class="wa-avatar is-hidden" id="waAvatar2" alt="" />
-      <span class="wa-dot" id="waDot2"></span>
-      <svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.9-.5-1.8-1.1-2.5-1.9-.6-.7-1.1-1.4-1.6-2.2-.1-.2 0-.4.1-.5.2-.2.5-.5.6-.7.1-.2.2-.4.1-.6-.1-.2-.7-1.7-1-2.3-.2-.5-.5-.4-.7-.4-.6 0-1 .1-1.4.5-1.4 1.4-1.4 3.2.1 5.1 1.6 2.1 3.2 3.4 5.7 4.3 2 .7 2.9.4 3.5-.1.5-.5.9-1.4.7-1.9-.1-.2-.3-.4-.4-.5Z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.2-1.3c1.4.8 3.1 1.3 4.8 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3C4 14.9 3.6 13.5 3.6 12c0-4.6 3.8-8.4 8.4-8.4s8.4 3.8 8.4 8.4-3.8 8.4-8.4 8.4Z"/></svg>
-      <span id="waName2">WhatsApp</span>
+    <a href="#" id="waContact2" class="wa-card" target="_blank" rel="noopener">
+      <span class="wa-frame">
+        <span class="wa-frame-inner">
+          <img class="wa-avatar is-hidden" id="waAvatar2" alt="" />
+          <span class="wa-placeholder" id="waPlaceholder2">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+          </span>
+        </span>
+      </span>
+      <span class="wa-status"><svg viewBox="0 0 24 24" fill="#fff"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1-.2.2-.3.2-.6.1-.9-.5-1.8-1.1-2.5-1.9-.6-.7-1.1-1.4-1.6-2.2-.1-.2 0-.4.1-.5.2-.2.5-.5.6-.7.1-.2.2-.4.1-.6-.1-.2-.7-1.7-1-2.3-.2-.5-.5-.4-.7-.4-.6 0-1 .1-1.4.5-1.4 1.4-1.4 3.2.1 5.1 1.6 2.1 3.2 3.4 5.7 4.3 2 .7 2.9.4 3.5-.1.5-.5.9-1.4.7-1.9-.1-.2-.3-.4-.4-.5Z"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.4 5L2 22l5.2-1.3c1.4.8 3.1 1.3 4.8 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2Zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3.1.8.8-3-.2-.3C4 14.9 3.6 13.5 3.6 12c0-4.6 3.8-8.4 8.4-8.4s8.4 3.8 8.4 8.4-3.8 8.4-8.4 8.4Z"/></svg></span>
+      <span class="wa-card-info">
+        <span class="wa-card-name" id="waName2">WhatsApp</span>
+        <span class="wa-card-sub">Chamar no WhatsApp</span>
+      </span>
     </a>
   </div>
   <div style="display:flex;justify-content:center;padding-bottom:32px">
@@ -367,6 +428,23 @@
 
 <div class="modal-overlay" id="modalOverlay" hidden>
   <div class="modal-card" id="modalBody"></div>
+</div>
+
+<button type="button" class="cart-fab" id="cartFab" aria-label="Ver carrinho">
+  <svg class="cart-fab-icon" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="4" cy="5" r="1.5" fill="currentColor" stroke="none"/>
+    <path d="M4 5 L9 5 L12.5 13"/>
+    <path d="M12.5 13 L30 13 L26.5 16.5 L26.5 24.5 L15.5 24.5 L12.5 16.5 Z"/>
+    <path d="M16 17.5 H23" stroke-width="1.2" opacity=".55"/>
+    <path d="M16.8 21 H22" stroke-width="1.2" opacity=".55"/>
+    <path d="M17 27 L19 29 L17 31 L15 29 Z" fill="currentColor" stroke="none"/>
+    <path d="M25 27 L27 29 L25 31 L23 29 Z" fill="currentColor" stroke="none"/>
+  </svg>
+  <span class="cart-count" id="cartCount" hidden>0</span>
+</button>
+
+<div class="modal-overlay" id="cartOverlay" hidden>
+  <div class="modal-card" id="cartBody"></div>
 </div>
 
 <script>
@@ -445,6 +523,77 @@ var PRODUCTS = [];
 
 function waLink(number, text){ return 'https://wa.me/' + number + '?text=' + encodeURIComponent(text); }
 
+var cart = [];
+function parsePrice(str){
+  if(!str) return 0;
+  var cleaned = String(str).replace(/[^\d,.]/g,'');
+  if(cleaned.indexOf(',') !== -1) cleaned = cleaned.replace(/\./g,'').replace(',','.');
+  var n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+function updateCartBadge(){
+  var el = document.getElementById('cartCount');
+  if(!el) return;
+  var qty = cart.reduce(function(s,it){ return s+it.qty; }, 0);
+  el.textContent = qty;
+  el.hidden = qty === 0;
+}
+function addToCart(name, variation, price){
+  var priceNum = parsePrice(price);
+  var existing = cart.find(function(it){ return it.name===name && it.variation===variation; });
+  if(existing) existing.qty += 1;
+  else cart.push({ name: name, variation: variation, price: price, priceNum: priceNum, qty: 1 });
+  updateCartBadge();
+}
+function buildCartMessage(){
+  var lines = cart.map(function(it){
+    return '- ' + (it.qty>1 ? it.qty+'x ' : '') + it.name + (it.variation ? ' ('+it.variation+')' : '') + ' — ' + it.price;
+  });
+  var total = cart.reduce(function(s,it){ return s+it.priceNum*it.qty; }, 0);
+  return 'Oi! Quero fazer esse pedido:\n' + lines.join('\n') + '\nTotal aproximado: R$ ' + total.toFixed(2).replace('.',',');
+}
+function renderCartModal(){
+  var cartBody = document.getElementById('cartBody');
+  var itemsHtml = cart.map(function(it, idx){
+    return '<div class="admin-product-row"><span>'+(it.qty>1?it.qty+'x ':'')+it.name+(it.variation?' — '+it.variation:'')+' · '+it.price+'</span>' +
+      '<button type="button" class="danger" data-cart-rm="'+idx+'">Remover</button></div>';
+  }).join('') || '<p style="color:var(--muted-foreground);font-size:13px;">Carrinho vazio.</p>';
+  var total = cart.reduce(function(s,it){ return s+it.priceNum*it.qty; }, 0);
+
+  cartBody.innerHTML =
+    '<h2>Seu carrinho</h2>' + itemsHtml +
+    (cart.length ? '<p style="margin:14px 0 0;font-weight:800;color:var(--primary);">Total aproximado: R$ '+total.toFixed(2).replace('.',',')+'</p>' : '') +
+    '<div style="margin-top:20px;">' +
+      '<button class="btn btn-primary" type="button" id="cartCheckout" style="width:100%;"'+(cart.length?'':' disabled')+'>Chamar no WhatsApp</button>' +
+      '<div id="cartWaMenu" style="display:none;margin-top:10px;">' +
+        '<a href="#" id="cartWa1" target="_blank" rel="noopener" class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:8px;display:flex;"><span id="cartWaName1"></span></a>' +
+        '<a href="#" id="cartWa2" target="_blank" rel="noopener" class="btn btn-outline" style="width:100%;justify-content:center;display:flex;"><span id="cartWaName2"></span></a>' +
+      '</div>' +
+    '</div>' +
+    '<div class="modal-actions" style="margin-top:18px;"><button class="btn-secondary" id="cartClose" type="button" style="width:100%;">Fechar</button></div>';
+
+  document.getElementById('cartClose').addEventListener('click', function(){ document.getElementById('cartOverlay').hidden = true; });
+  cartBody.querySelectorAll('[data-cart-rm]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      cart.splice(parseInt(btn.getAttribute('data-cart-rm'),10), 1);
+      updateCartBadge();
+      renderCartModal();
+    });
+  });
+  var checkoutBtn = document.getElementById('cartCheckout');
+  if(checkoutBtn && cart.length){
+    checkoutBtn.addEventListener('click', function(){
+      var menu = document.getElementById('cartWaMenu');
+      menu.style.display = (menu.style.display === 'none') ? 'block' : 'none';
+      var msg = buildCartMessage();
+      document.getElementById('cartWaName1').textContent = 'Falar com ' + (SITE_CONFIG.name1 || 'contato 1');
+      document.getElementById('cartWaName2').textContent = 'Falar com ' + (SITE_CONFIG.name2 || 'contato 2');
+      document.getElementById('cartWa1').href = SITE_CONFIG.whatsapp1 ? waLink(SITE_CONFIG.whatsapp1, msg) : '#';
+      document.getElementById('cartWa2').href = SITE_CONFIG.whatsapp2 ? waLink(SITE_CONFIG.whatsapp2, msg) : '#';
+    });
+  }
+}
+
 function fileError(file){
   if(!file) return null;
   if(file.type.indexOf('image/') !== 0) return 'Envie uma imagem (foto), não vídeo.';
@@ -521,6 +670,15 @@ function productImgHtml(p){
   var img = p.coverPhoto || (p.photos && p.photos[0]) || null;
   return img ? '<img src="'+img+'" alt="" style="width:100%;height:100%;object-fit:cover">' : '<div class="grid-bg" style="opacity:.3"></div>';
 }
+function variationSelectHtml(p){
+  if(!p.hasVariations || !p.variations || !p.variations.length) return '';
+  return '<select class="var-select" onclick="event.stopPropagation()">' +
+    p.variations.map(function(v){
+      var label = (v.label || 'Modelo').replace(/"/g,'&quot;');
+      return '<option value="'+label+'">'+label+'</option>';
+    }).join('') +
+    '</select>';
+}
 function renderProducts(){
   var grid = document.getElementById('prodsGrid');
   var subtitle = document.getElementById('catalogSubtitle');
@@ -531,18 +689,19 @@ function renderProducts(){
   }
   subtitle.textContent = PRODUCTS.length + ' produtos disponíveis.';
   grid.innerHTML = PRODUCTS.map(function(p,i){
-    return '<article class="prod" data-category="'+(p.category||'')+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+String(i+1).padStart(2,'0')+'</span></div><div class="prod-body"><p class="prod-cat">'+(p.category||'Geral')+'</p><h3 class="prod-name">'+p.name+'</h3><div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline">+ Cart</button></div></div></article>';
+    return '<article class="prod" data-category="'+(p.category||'')+'" data-idx="'+i+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+String(i+1).padStart(2,'0')+'</span></div><div class="prod-body"><p class="prod-cat">'+(p.category||'Geral')+'</p><h3 class="prod-name">'+p.name+'</h3>'+variationSelectHtml(p)+'<div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
   }).join('');
 }
 function renderDrops(){
   var grid = document.getElementById('dropsGrid');
   if(!PRODUCTS.length) return;
   var byCategory = {};
-  PRODUCTS.forEach(function(p){ if(p.category) byCategory[p.category] = p; });
+  PRODUCTS.forEach(function(p,i){ if(p.category) byCategory[p.category] = {p:p, i:i}; });
   var latest = Object.values(byCategory);
-  var list = (latest.length ? latest : PRODUCTS).slice(-6);
-  grid.innerHTML = list.map(function(p,i){
-    return '<article class="prod"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+String(i+1).padStart(2,'0')+'</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">'+(p.category||'Geral')+'</p><h3 class="prod-name">'+p.name+'</h3><div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline">+ Cart</button></div></div></article>';
+  var list = (latest.length ? latest : PRODUCTS.map(function(p,i){ return {p:p, i:i}; })).slice(-6);
+  grid.innerHTML = list.map(function(item, n){
+    var p = item.p, realIdx = item.i;
+    return '<article class="prod" data-idx="'+realIdx+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+String(n+1).padStart(2,'0')+'</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">'+(p.category||'Geral')+'</p><h3 class="prod-name">'+p.name+'</h3>'+variationSelectHtml(p)+'<div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+realIdx+'">+ Cart</button></div></div></article>';
   }).join('');
 }
 
@@ -558,17 +717,17 @@ function setWaButton(n, name, number, photo){
   var link = document.getElementById('waContact' + n);
   var nameEl = document.getElementById('waName' + n);
   var avatar = document.getElementById('waAvatar' + n);
-  var dot = document.getElementById('waDot' + n);
+  var placeholder = document.getElementById('waPlaceholder' + n);
   if(!link) return;
   link.href = number ? waLink(number, 'Oi ' + name + '! Quero fazer um pedido na Eixo Z') : '#';
   nameEl.textContent = name || 'WhatsApp';
   if(photo){
     avatar.src = photo;
     avatar.classList.remove('is-hidden');
-    dot.classList.add('is-hidden');
+    placeholder.classList.add('is-hidden');
   } else {
     avatar.classList.add('is-hidden');
-    dot.classList.remove('is-hidden');
+    placeholder.classList.remove('is-hidden');
   }
 }
 
@@ -662,10 +821,10 @@ function renderAdminHome(){
   document.getElementById('goInfo').addEventListener('click', renderInfoForm);
 }
 
+var SITE_CATEGORIES = ['Games', 'RPG & Dados', 'Colecionáveis', 'Vestuário', 'Personalizáveis', 'Decoração'];
+
 function getCategories(){
-  var list = [];
-  PRODUCTS.forEach(function(p){ if(p.category && list.indexOf(p.category) === -1) list.push(p.category); });
-  return list;
+  return SITE_CATEGORIES.slice();
 }
 
 function renderPhotoSlots(){
@@ -987,6 +1146,35 @@ document.getElementById('adminToggle').addEventListener('click', function(){
   if(auth.currentUser) renderAdminHome(); else renderLoginForm();
 });
 modalOverlay.addEventListener('click', function(e){ if(e.target === modalOverlay) closeModal(); });
+
+var cartFab = document.getElementById('cartFab');
+var cartOverlay = document.getElementById('cartOverlay');
+if(cartFab){
+  cartFab.addEventListener('click', function(){
+    cartOverlay.hidden = false;
+    renderCartModal();
+  });
+}
+if(cartOverlay){
+  cartOverlay.addEventListener('click', function(e){ if(e.target === cartOverlay) cartOverlay.hidden = true; });
+}
+document.addEventListener('click', function(e){
+  var addBtn = e.target.closest('.cart-add-btn');
+  if(!addBtn) return;
+  var idx = parseInt(addBtn.getAttribute('data-idx'), 10);
+  var p = PRODUCTS[idx];
+  if(!p) return;
+  var variation = null;
+  if(p.hasVariations && p.variations && p.variations.length){
+    var card = addBtn.closest('.prod');
+    var sel = card ? card.querySelector('.var-select') : null;
+    variation = sel ? sel.value : p.variations[0].label;
+  }
+  addToCart(p.name, variation, p.price);
+  var original = addBtn.textContent;
+  addBtn.textContent = 'Adicionado ✓';
+  setTimeout(function(){ addBtn.textContent = original; }, 1200);
+});
 
 onAuthStateChanged(auth, function(user){
   if(!modalOverlay.hidden){
