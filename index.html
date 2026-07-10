@@ -152,6 +152,17 @@
   @keyframes cart-badge-pop{0%{transform:scale(0)}65%{transform:scale(1.2)}100%{transform:scale(1)}}
   .var-select{width:100%;margin-top:8px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--foreground);font-size:12px}
 
+  /* Product photo gallery */
+  .gallery{position:relative;width:100%;height:100%}
+  .gallery-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .25s ease}
+  .gallery-photo.active{opacity:1}
+  .gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:oklch(0.09 0.02 260 / .6);border:1px solid oklch(0.72 0.19 235 / .4);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;cursor:pointer;z-index:3}
+  .gallery-prev{left:8px}
+  .gallery-next{right:8px}
+  .gallery-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:5px;z-index:3}
+  .gallery-dot{width:6px;height:6px;border-radius:50%;background:oklch(1 0 0 / .35);cursor:pointer;transition:background .2s}
+  .gallery-dot.active{background:var(--primary)}
+
   /* Hero */
   .hero{display:grid;gap:40px;align-items:center;padding:8px 0 96px;grid-template-columns:1fr}
   @media(min-width:768px){.hero{grid-template-columns:1fr 1fr;padding-top:16px}}
@@ -193,7 +204,8 @@
   #drops-panel.show{max-height:3000px;opacity:1}
   #catalog-panel{max-height:0;opacity:0;overflow:hidden;transition:max-height .6s ease, opacity .4s ease .05s}
   #catalog-panel.show{max-height:6000px;opacity:1}
-  .category-group{margin-bottom:44px}
+  .category-group{margin-bottom:44px;display:none}
+  .category-group.active-group{display:block}
   .category-group-title{font-family:"Orbitron";font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 
   /* Loading */
@@ -313,8 +325,8 @@
     <span style="font-size:11px;text-transform:uppercase;letter-spacing:.2em;color:var(--muted-foreground)">Escolha sua fase</span>
   </div>
   <div class="cats" id="catsGrid">
-    <a href="#loja" class="cat" data-cat="Games" onclick="filterCategory(event)"><span>Games</span></a>
-    <a href="#loja" class="cat" data-cat="RPG & Dados" onclick="filterCategory(event)"><span>RPG & Dados</span></a>
+    <a href="#loja" class="cat" data-cat="Chaveiros" onclick="filterCategory(event)"><span>Chaveiros</span></a>
+    <a href="#loja" class="cat" data-cat="RPG & Games" onclick="filterCategory(event)"><span>RPG & Games</span></a>
     <a href="#loja" class="cat" data-cat="Colecionáveis" onclick="filterCategory(event)"><span>Colecionáveis</span></a>
     <a href="#loja" class="cat" data-cat="Vestuário" onclick="filterCategory(event)"><span>Vestuário</span></a>
     <a href="#loja" class="cat" data-cat="Personalizáveis" onclick="filterCategory(event)"><span>Personalizáveis</span></a>
@@ -355,13 +367,9 @@
   </div>
 
   <div id="catalog-panel">
-  <div class="sec-head" style="margin-top:48px">
-    <div>
-      <h2 class="prods-title">Todos os <span class="primary text-glow">produtos</span></h2>
-      <p id="catalogSubtitle" style="margin-top:8px;font-size:13px;color:var(--muted-foreground)">Carregando produtos...</p>
-    </div>
-  </div>
-  <div id="prodsGrid"></div>
+  <p id="catalogHint" style="margin-top:48px;font-size:13px;color:var(--muted-foreground);text-align:center">Escolha uma categoria acima para ver os produtos.</p>
+  <p style="margin-top:12px;font-size:13px;text-align:center;color:var(--muted-foreground)">Quer um projeto <span class="primary" style="font-weight:700">exclusivo e sob medida</span>? Fale com a gente em <a href="#contato" onclick="revealContato(event)" style="color:var(--primary);font-weight:700;text-decoration:underline">Contato</a> e vamos criar algo único pra você.</p>
+  <div id="prodsGrid" style="margin-top:24px"></div>
   </div>
 </section>
 
@@ -374,8 +382,8 @@
     </div>
   </div>
   <div class="prods" id="dropsGrid">
-    <article class="prod"><div class="prod-img"><div class="grid-bg" style="opacity:.3"></div><span class="num">01</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">Games</p><h3 class="prod-name">Controle Retrô Wireless</h3><div class="prod-foot"><span class="prod-price">R$ 349</span><button class="btn btn-outline">+ Cart</button></div></div></article>
-    <article class="prod"><div class="prod-img"><div class="grid-bg" style="opacity:.3"></div><span class="num">02</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">RPG & Dados</p><h3 class="prod-name">Dado D20 Neon</h3><div class="prod-foot"><span class="prod-price">R$ 79</span><button class="btn btn-outline">+ Cart</button></div></div></article>
+    <article class="prod"><div class="prod-img"><div class="grid-bg" style="opacity:.3"></div><span class="num">01</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">Chaveiros</p><h3 class="prod-name">Controle Retrô Wireless</h3><div class="prod-foot"><span class="prod-price">R$ 349</span><button class="btn btn-outline">+ Cart</button></div></div></article>
+    <article class="prod"><div class="prod-img"><div class="grid-bg" style="opacity:.3"></div><span class="num">02</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">RPG & Games</p><h3 class="prod-name">Dado D20 Neon</h3><div class="prod-foot"><span class="prod-price">R$ 79</span><button class="btn btn-outline">+ Cart</button></div></div></article>
     <article class="prod"><div class="prod-img"><div class="grid-bg" style="opacity:.3"></div><span class="num">03</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">Colecionáveis</p><h3 class="prod-name">Espada Diamante Pixel</h3><div class="prod-foot"><span class="prod-price">R$ 189</span><button class="btn btn-outline">+ Cart</button></div></div></article>
     <article class="prod"><div class="prod-img"><div class="grid-bg" style="opacity:.3"></div><span class="num">04</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">Vestuário</p><h3 class="prod-name">Camiseta Heart 8-Bit</h3><div class="prod-foot"><span class="prod-price">R$ 129</span><button class="btn btn-outline">+ Cart</button></div></div></article>
     <article class="prod"><div class="prod-img"><div class="grid-bg" style="opacity:.3"></div><span class="num">05</span><span class="tag tag-new">Novo</span></div><div class="prod-body"><p class="prod-cat">Retrô</p><h3 class="prod-name">Chaveiro Trifórcia</h3><div class="prod-foot"><span class="prod-price">R$ 39</span><button class="btn btn-outline">+ Cart</button></div></div></article>
@@ -501,9 +509,10 @@ function filterCategory(e){
   window.__activeCategory = (window.__activeCategory === cat) ? null : cat;
   document.querySelectorAll('#catsGrid .cat').forEach(c => c.classList.toggle('active', c.getAttribute('data-cat') === window.__activeCategory));
   document.querySelectorAll('#prodsGrid .category-group').forEach(g => {
-    const show = !window.__activeCategory || g.getAttribute('data-cat-group') === window.__activeCategory;
-    g.style.display = show ? '' : 'none';
+    g.classList.toggle('active-group', g.getAttribute('data-cat-group') === window.__activeCategory);
   });
+  const hint = document.getElementById('catalogHint');
+  if(hint) hint.style.display = window.__activeCategory ? 'none' : '';
   revealCategorias(e);
 }
 </script>
@@ -685,9 +694,31 @@ function attachBannerDots(){
   });
 }
 
+function getProductPhotos(p, variationLabel){
+  if(p.hasVariations && p.variations && p.variations.length){
+    var v = p.variations.find(function(v){ return (v.label || 'Modelo') === variationLabel; }) || p.variations[0];
+    if(v && v.photos && v.photos.length) return v.photos;
+  }
+  if(p.photos && p.photos.length) return p.photos;
+  if(p.coverPhoto) return [p.coverPhoto];
+  return [];
+}
+function galleryHtml(photos){
+  if(!photos || !photos.length) return '<div class="grid-bg" style="opacity:.3"></div>';
+  var imgs = photos.map(function(src, idx){
+    return '<img src="'+src+'" alt="" class="gallery-photo'+(idx===0?' active':'')+'">';
+  }).join('');
+  if(photos.length === 1) return '<div class="gallery" data-idx="0">' + imgs + '</div>';
+  var dots = photos.map(function(_, idx){
+    return '<span class="gallery-dot'+(idx===0?' active':'')+'" data-idx="'+idx+'"></span>';
+  }).join('');
+  return '<div class="gallery" data-idx="0">' + imgs +
+    '<button type="button" class="gallery-arrow gallery-prev" aria-label="Foto anterior">&#8249;</button>' +
+    '<button type="button" class="gallery-arrow gallery-next" aria-label="Próxima foto">&#8250;</button>' +
+    '<div class="gallery-dots">' + dots + '</div></div>';
+}
 function productImgHtml(p){
-  var img = p.coverPhoto || (p.photos && p.photos[0]) || null;
-  return img ? '<img src="'+img+'" alt="" style="width:100%;height:100%;object-fit:cover">' : '<div class="grid-bg" style="opacity:.3"></div>';
+  return galleryHtml(getProductPhotos(p, p.hasVariations && p.variations && p.variations[0] ? (p.variations[0].label || 'Modelo') : null));
 }
 function variationSelectHtml(p){
   if(!p.hasVariations || !p.variations || !p.variations.length) return '';
@@ -700,13 +731,12 @@ function variationSelectHtml(p){
 }
 function renderProducts(){
   var grid = document.getElementById('prodsGrid');
-  var subtitle = document.getElementById('catalogSubtitle');
+  var hint = document.getElementById('catalogHint');
   if(!PRODUCTS.length){
     grid.innerHTML = '';
-    subtitle.textContent = 'Nenhum produto por aqui ainda.';
+    if(hint) hint.textContent = 'Nenhum produto por aqui ainda.';
     return;
   }
-  subtitle.textContent = PRODUCTS.length + ' produtos disponíveis.';
 
   var order = SITE_CATEGORIES.slice();
   PRODUCTS.forEach(function(p){
@@ -859,7 +889,7 @@ function renderAdminHome(){
   document.getElementById('goInfo').addEventListener('click', renderInfoForm);
 }
 
-var SITE_CATEGORIES = ['Games', 'RPG & Dados', 'Colecionáveis', 'Vestuário', 'Personalizáveis', 'Decoração'];
+var SITE_CATEGORIES = ['Chaveiros', 'RPG & Games', 'Colecionáveis', 'Vestuário', 'Personalizáveis', 'Decoração'];
 
 function getCategories(){
   return SITE_CATEGORIES.slice();
@@ -1196,22 +1226,66 @@ if(cartFab){
 if(cartOverlay){
   cartOverlay.addEventListener('click', function(e){ if(e.target === cartOverlay) cartOverlay.hidden = true; });
 }
+function setGalleryIndex(gallery, idx){
+  var photos = gallery.querySelectorAll('.gallery-photo');
+  var dots = gallery.querySelectorAll('.gallery-dot');
+  photos.forEach(function(img){ img.classList.remove('active'); });
+  dots.forEach(function(d){ d.classList.remove('active'); });
+  if(photos[idx]) photos[idx].classList.add('active');
+  if(dots[idx]) dots[idx].classList.add('active');
+  gallery.dataset.idx = idx;
+}
+
 document.addEventListener('click', function(e){
   var addBtn = e.target.closest('.cart-add-btn');
-  if(!addBtn) return;
-  var idx = parseInt(addBtn.getAttribute('data-idx'), 10);
+  if(addBtn){
+    var idx = parseInt(addBtn.getAttribute('data-idx'), 10);
+    var p = PRODUCTS[idx];
+    if(!p) return;
+    var variation = null;
+    if(p.hasVariations && p.variations && p.variations.length){
+      var card = addBtn.closest('.prod');
+      var sel = card ? card.querySelector('.var-select') : null;
+      variation = sel ? sel.value : p.variations[0].label;
+    }
+    addToCart(p.name, variation, p.price);
+    var original = addBtn.textContent;
+    addBtn.textContent = 'Adicionado ✓';
+    setTimeout(function(){ addBtn.textContent = original; }, 1200);
+    return;
+  }
+
+  var next = e.target.closest('.gallery-next');
+  var prev = e.target.closest('.gallery-prev');
+  var dot = e.target.closest('.gallery-dot');
+  if(next || prev || dot){
+    e.preventDefault();
+    e.stopPropagation();
+    var gallery = e.target.closest('.gallery');
+    var photos = gallery.querySelectorAll('.gallery-photo');
+    var count = photos.length;
+    var current = parseInt(gallery.dataset.idx || '0', 10);
+    var target = current;
+    if(next) target = (current + 1) % count;
+    else if(prev) target = (current - 1 + count) % count;
+    else if(dot) target = parseInt(dot.getAttribute('data-idx'), 10);
+    setGalleryIndex(gallery, target);
+  }
+});
+
+document.addEventListener('change', function(e){
+  var sel = e.target.closest('.var-select');
+  if(!sel) return;
+  var card = sel.closest('.prod');
+  if(!card) return;
+  var idx = parseInt(card.getAttribute('data-idx'), 10);
   var p = PRODUCTS[idx];
   if(!p) return;
-  var variation = null;
-  if(p.hasVariations && p.variations && p.variations.length){
-    var card = addBtn.closest('.prod');
-    var sel = card ? card.querySelector('.var-select') : null;
-    variation = sel ? sel.value : p.variations[0].label;
-  }
-  addToCart(p.name, variation, p.price);
-  var original = addBtn.textContent;
-  addBtn.textContent = 'Adicionado ✓';
-  setTimeout(function(){ addBtn.textContent = original; }, 1200);
+  var photos = getProductPhotos(p, sel.value);
+  var imgBox = card.querySelector('.prod-img');
+  var oldGallery = imgBox.querySelector('.gallery, .grid-bg');
+  if(oldGallery) oldGallery.remove();
+  imgBox.insertAdjacentHTML('afterbegin', galleryHtml(photos));
 });
 
 onAuthStateChanged(auth, function(user){
