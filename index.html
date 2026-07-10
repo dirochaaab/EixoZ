@@ -138,6 +138,7 @@
   .cart-fab:hover{transform:translateY(-3px);border-color:var(--primary);box-shadow:var(--shadow-neon)}
   .cart-fab:active{transform:translateY(-1px) scale(.96)}
   .cart-fab-icon{width:23px;height:23px;color:var(--primary);filter:drop-shadow(0 0 3px oklch(0.72 0.19 235 / .6))}
+  .cart-count[hidden]{display:none !important}
   .cart-count{
     position:absolute;top:-3px;right:-3px;
     min-width:20px;height:20px;padding:0 5px;border-radius:999px;
@@ -190,6 +191,10 @@
   #categorias-panel.show{max-height:900px;opacity:1;margin-bottom:48px}
   #drops-panel{max-height:0;opacity:0;overflow:hidden;transition:max-height .6s ease, opacity .4s ease .05s}
   #drops-panel.show{max-height:3000px;opacity:1}
+  #catalog-panel{max-height:0;opacity:0;overflow:hidden;transition:max-height .6s ease, opacity .4s ease .05s}
+  #catalog-panel.show{max-height:6000px;opacity:1}
+  .category-group{margin-bottom:44px}
+  .category-group-title{font-family:"Orbitron";font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 
   /* Loading */
   .loot-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:64px 20px;text-align:center}
@@ -228,9 +233,19 @@
   @media(min-width:1024px){.prods{grid-template-columns:1fr 1fr 1fr}}
   .prod{position:relative;overflow:hidden;border-radius:12px;border:1px solid var(--border);background:var(--card);transition:all .2s}
   .prod:hover{transform:translateY(-4px);border-color:oklch(0.72 0.19 235 / .6);box-shadow:var(--shadow-neon)}
-  .prod-img{position:relative;aspect-ratio:1;overflow:hidden;background:linear-gradient(135deg, var(--secondary), var(--card), var(--background));display:flex;align-items:center;justify-content:center}
-  .prod-img .num{font-family:"Orbitron";font-size:64px;font-weight:900;color:oklch(0.72 0.19 235 / .2);transition:all .3s}
-  .prod:hover .num{transform:scale(1.1);color:oklch(0.72 0.19 235 / .4)}
+  .prod-img{position:relative;aspect-ratio:1;overflow:hidden;background:linear-gradient(135deg, var(--secondary), var(--card), var(--background));display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border)}
+  .prod-img .num{
+    position:absolute;left:10px;bottom:10px;z-index:2;
+    font-family:"Orbitron";font-size:11px;font-weight:700;letter-spacing:.1em;
+    color:var(--primary);
+    background:oklch(0.09 0.02 260 / .75);
+    border:1px solid oklch(0.72 0.19 235 / .4);
+    border-radius:5px;
+    padding:3px 7px;
+    line-height:1;
+    transition:border-color .25s, background .25s;
+  }
+  .prod:hover .num{border-color:var(--primary);background:oklch(0.09 0.02 260 / .9)}
   .tag{position:absolute;left:12px;top:12px;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.2em}
   .tag-new{background:var(--primary);color:var(--primary-foreground);box-shadow:var(--shadow-neon)}
   .tag-hot{background:var(--accent);color:var(--accent-foreground);box-shadow:var(--shadow-ember)}
@@ -307,12 +322,7 @@
   </div>
   </div>
 
-  <div class="loot-loading" style="margin-top:48px">
-    <div class="loader-ring"><div></div><div></div><div></div><div></div></div>
-    <p class="loader-text">Loading<span class="dots"><span>.</span><span>.</span><span>.</span></span></p>
-  </div>
-
-  <div class="banner-carousel" id="bannerCarousel" style="margin-top:24px">
+  <div class="banner-carousel" id="bannerCarousel" style="margin-top:48px">
     <div class="banner-track">
       <div class="banner-slide active">
         <div class="banner-placeholder"><span class="plus">+</span><p>Banner 1</p><small>Disponível apenas para a equipe</small></div>
@@ -339,13 +349,20 @@
     </div>
   </div>
 
+  <div class="loot-loading" style="margin-top:24px">
+    <div class="loader-ring"><div></div><div></div><div></div><div></div></div>
+    <p class="loader-text">Loading<span class="dots"><span>.</span><span>.</span><span>.</span></span></p>
+  </div>
+
+  <div id="catalog-panel">
   <div class="sec-head" style="margin-top:48px">
     <div>
       <h2 class="prods-title">Todos os <span class="primary text-glow">produtos</span></h2>
       <p id="catalogSubtitle" style="margin-top:8px;font-size:13px;color:var(--muted-foreground)">Carregando produtos...</p>
     </div>
   </div>
-  <div class="prods" id="prodsGrid"></div>
+  <div id="prodsGrid"></div>
+  </div>
 </section>
 
 <section id="drops" class="wrap">
@@ -454,6 +471,8 @@ function revealCategorias(e){
   e.preventDefault();
   const panel = document.getElementById('categorias-panel');
   panel.classList.add('show');
+  const catalogPanel = document.getElementById('catalog-panel');
+  if(catalogPanel) catalogPanel.classList.add('show');
   const target = e.currentTarget.getAttribute('href') === '#categorias'
     ? document.getElementById('categorias')
     : document.getElementById('loja');
@@ -481,9 +500,9 @@ function filterCategory(e){
   const cat = e.currentTarget.getAttribute('data-cat');
   window.__activeCategory = (window.__activeCategory === cat) ? null : cat;
   document.querySelectorAll('#catsGrid .cat').forEach(c => c.classList.toggle('active', c.getAttribute('data-cat') === window.__activeCategory));
-  document.querySelectorAll('#prodsGrid .prod').forEach(p => {
-    const show = !window.__activeCategory || p.getAttribute('data-category') === window.__activeCategory;
-    p.style.display = show ? '' : 'none';
+  document.querySelectorAll('#prodsGrid .category-group').forEach(g => {
+    const show = !window.__activeCategory || g.getAttribute('data-cat-group') === window.__activeCategory;
+    g.style.display = show ? '' : 'none';
   });
   revealCategorias(e);
 }
@@ -688,8 +707,27 @@ function renderProducts(){
     return;
   }
   subtitle.textContent = PRODUCTS.length + ' produtos disponíveis.';
-  grid.innerHTML = PRODUCTS.map(function(p,i){
-    return '<article class="prod" data-category="'+(p.category||'')+'" data-idx="'+i+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+String(i+1).padStart(2,'0')+'</span></div><div class="prod-body"><p class="prod-cat">'+(p.category||'Geral')+'</p><h3 class="prod-name">'+p.name+'</h3>'+variationSelectHtml(p)+'<div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
+
+  var order = SITE_CATEGORIES.slice();
+  PRODUCTS.forEach(function(p){
+    var c = p.category || 'Sem categoria';
+    if(order.indexOf(c) === -1) order.push(c);
+  });
+
+  var byCat = {};
+  PRODUCTS.forEach(function(p, i){
+    var c = p.category || 'Sem categoria';
+    if(!byCat[c]) byCat[c] = [];
+    byCat[c].push({ p: p, i: i });
+  });
+
+  grid.innerHTML = order.filter(function(c){ return byCat[c] && byCat[c].length; }).map(function(cat){
+    var items = byCat[cat];
+    var cardsHtml = items.map(function(item){
+      var p = item.p, i = item.i;
+      return '<article class="prod" data-idx="'+i+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+String(i+1).padStart(2,'0')+'</span></div><div class="prod-body"><p class="prod-cat">'+cat+'</p><h3 class="prod-name">'+p.name+'</h3>'+variationSelectHtml(p)+'<div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
+    }).join('');
+    return '<div class="category-group" data-cat-group="'+cat+'"><h3 class="category-group-title">'+cat+'</h3><div class="prods">'+cardsHtml+'</div></div>';
   }).join('');
 }
 function renderDrops(){
