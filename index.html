@@ -158,6 +158,13 @@
   .estampa-thumb.active{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
   .estampa-label{margin-top:6px;font-size:11px;color:var(--primary);font-weight:700}
 
+  /* Zoom lightbox */
+  .zoom-overlay{position:fixed;inset:0;z-index:300;background:oklch(0.03 0.01 260 / .92);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+  .zoom-overlay[hidden]{display:none}
+  .zoom-overlay img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;box-shadow:var(--shadow-neon)}
+  .zoom-close{position:absolute;top:18px;right:20px;width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--border);color:var(--foreground);font-size:22px;line-height:1;cursor:pointer}
+  .prod-img{cursor:zoom-in}
+
   /* Product photo gallery */
   .gallery{position:relative;width:100%;height:100%}
   .gallery-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .25s ease}
@@ -477,6 +484,11 @@
   <div class="modal-card" id="cartBody"></div>
 </div>
 
+<div class="zoom-overlay" id="zoomOverlay" hidden>
+  <button type="button" class="zoom-close" id="zoomClose" aria-label="Fechar">&times;</button>
+  <img id="zoomImg" src="" alt="Foto ampliada">
+</div>
+
 <script>
 document.getElementById('yr').textContent = new Date().getFullYear();
 
@@ -742,30 +754,39 @@ function vestuarioCardExtras(p, i){
     '<div class="estampa-picker" data-idx="'+i+'">' +
     estampas.map(function(e, ei){
       var safeName = (e.name||'').replace(/"/g,'&quot;');
-      return '<button type="button" class="estampa-thumb'+(ei===0?' active':'')+'" data-ei="'+ei+'" title="'+safeName+'" onclick="event.stopPropagation()">' +
+      return '<button type="button" class="estampa-thumb" data-ei="'+ei+'" title="'+safeName+'">' +
         (e.photo ? '<img src="'+e.photo+'" alt="">' : '') + '</button>';
     }).join('') +
     '</div>' +
-    '<p class="estampa-label">'+(estampas[0].name||'')+'</p>'
+    '<p class="estampa-label" style="color:var(--muted-foreground)">Toque numa estampa acima para escolher</p>'
   ) : '';
   var tamanhoSel = tamanhos.length ? (
-    '<select class="tamanho-select" data-idx="'+i+'" onclick="event.stopPropagation()">' +
+    '<select class="tamanho-select" data-idx="'+i+'">' +
+    '<option value="">Selecione o tamanho</option>' +
     tamanhos.map(function(t){
       var safe = (t.size||'').replace(/"/g,'&quot;');
       return '<option value="'+safe+'">'+(t.size||'Tamanho')+'</option>';
     }).join('') + '</select>'
   ) : '';
   var corSel = cores.length ? (
-    '<select class="cor-select" data-idx="'+i+'" onclick="event.stopPropagation()">' +
+    '<select class="cor-select" data-idx="'+i+'">' +
+    '<option value="">Selecione a cor</option>' +
     cores.map(function(c){
       var safe = (c.name||'').replace(/"/g,'&quot;');
       return '<option value="'+safe+'">'+(c.name||'Cor')+'</option>';
     }).join('') + '</select>'
   ) : '';
-  return picker + tamanhoSel + corSel;
+  return picker + tamanhoSel + corSel + '<p class="error-msg vest-error" id="vestError'+i+'"></p>';
 }
 function vestuarioPrice(p){
-  if(p.tamanhos && p.tamanhos.length && p.tamanhos[0].price) return p.tamanhos[0].price;
+  if(p.tamanhos && p.tamanhos.length){
+    var prices = p.tamanhos.map(function(t){ return parsePrice(t.price); }).filter(function(n){ return n > 0; });
+    if(prices.length){
+      var min = Math.min.apply(null, prices);
+      var display = p.tamanhos.find(function(t){ return parsePrice(t.price) === min; });
+      return 'A partir de ' + (display ? display.price : p.price);
+    }
+  }
   return p.price;
 }
 function productCardHtml(p, i, opts){
@@ -1421,6 +1442,11 @@ modalOverlay.addEventListener('click', function(e){ if(e.target === modalOverlay
 
 var cartFab = document.getElementById('cartFab');
 var cartOverlay = document.getElementById('cartOverlay');
+var zoomOverlay = document.getElementById('zoomOverlay');
+if(zoomOverlay){
+  zoomOverlay.addEventListener('click', function(){ zoomOverlay.hidden = true; });
+  document.getElementById('zoomClose').addEventListener('click', function(e){ e.stopPropagation(); zoomOverlay.hidden = true; });
+}
 if(cartFab){
   cartFab.addEventListener('click', function(){
     cartOverlay.hidden = false;
@@ -1441,6 +1467,15 @@ function setGalleryIndex(gallery, idx){
 }
 
 document.addEventListener('click', function(e){
+  var zoomTarget = e.target.closest('.prod-img img, .prod-img .gallery-photo');
+  if(zoomTarget && !e.target.closest('.gallery-arrow') && !e.target.closest('.gallery-dot')){
+    var zo = document.getElementById('zoomOverlay');
+    var zi = document.getElementById('zoomImg');
+    zi.src = zoomTarget.src;
+    zo.hidden = false;
+    return;
+  }
+
   var addBtn = e.target.closest('.cart-add-btn');
   if(addBtn){
     var idx = parseInt(addBtn.getAttribute('data-idx'), 10);
@@ -1449,21 +1484,31 @@ document.addEventListener('click', function(e){
     var variation = null;
     var price = p.price;
     var card0 = addBtn.closest('.prod');
+    var errEl0 = document.getElementById('vestError' + idx);
+    if(errEl0) errEl0.textContent = '';
     if(p.productType === 'vestuario'){
       var parts = [];
       var activeThumb = card0 ? card0.querySelector('.estampa-thumb.active') : null;
+      if(p.estampas && p.estampas.length && !activeThumb){
+        if(errEl0) errEl0.textContent = 'Escolha uma estampa antes de continuar.';
+        return;
+      }
       if(activeThumb && p.estampas && p.estampas.length){
         var ei = parseInt(activeThumb.getAttribute('data-ei'), 10);
         if(p.estampas[ei]) parts.push('Estampa: ' + (p.estampas[ei].name || ''));
       }
       var tamSel = card0 ? card0.querySelector('.tamanho-select') : null;
-      if(tamSel){
+      if(p.tamanhos && p.tamanhos.length && (!tamSel || !tamSel.value)){
+        if(errEl0) errEl0.textContent = 'Escolha um tamanho antes de continuar.';
+        return;
+      }
+      if(tamSel && tamSel.value){
         parts.push('Tamanho: ' + tamSel.value);
         var t = (p.tamanhos || []).find(function(t){ return t.size === tamSel.value; });
         if(t && t.price) price = t.price;
       }
       var corSel = card0 ? card0.querySelector('.cor-select') : null;
-      if(corSel) parts.push('Cor: ' + corSel.value);
+      if(corSel && corSel.value) parts.push('Cor: ' + corSel.value);
       variation = parts.join(' · ') || null;
     } else if(p.hasVariations && p.variations && p.variations.length){
       var sel = card0 ? card0.querySelector('.var-select') : null;
@@ -1488,10 +1533,12 @@ document.addEventListener('click', function(e){
     picker.querySelectorAll('.estampa-thumb').forEach(function(b){ b.classList.remove('active'); });
     estampaBtn.classList.add('active');
     var card1 = picker.closest('.prod');
+    var errEl1 = document.getElementById('vestError' + pIdx);
+    if(errEl1) errEl1.textContent = '';
     var mainImg = card1 ? card1.querySelector('.prod-img img') : null;
     if(mainImg && prod.estampas[ei2].photo) mainImg.src = prod.estampas[ei2].photo;
     var label = card1 ? card1.querySelector('.estampa-label') : null;
-    if(label) label.textContent = prod.estampas[ei2].name || '';
+    if(label){ label.textContent = 'Estampa: ' + (prod.estampas[ei2].name || ''); label.style.color = 'var(--primary)'; }
     return;
   }
 
