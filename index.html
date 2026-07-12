@@ -284,7 +284,12 @@
   .prod-body{padding:16px}
   .prod-cat{font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:var(--muted-foreground)}
   .prod-name{font-family:"Orbitron";font-size:17px;font-weight:700;margin-top:4px}
+  .prod-name-sub{display:block;font-family:"Rajdhani",sans-serif;font-size:12px;font-weight:500;color:var(--muted-foreground);letter-spacing:.04em;margin-top:2px}
   .prod-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+  .qty-stepper{display:flex;align-items:center;gap:0;margin-top:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden;width:fit-content}
+  .qty-stepper button{width:30px;height:30px;background:var(--secondary);border:none;color:var(--foreground);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .qty-stepper button:hover{background:oklch(0.72 0.19 235 / .15);color:var(--primary)}
+  .qty-stepper .qty-value{width:34px;text-align:center;font-family:"Orbitron";font-size:13px;font-weight:700;color:var(--foreground);border-left:1px solid var(--border);border-right:1px solid var(--border)}
   .prod-price{font-family:"Orbitron";font-size:20px;font-weight:900;color:var(--primary)}
 
   /* CTA */
@@ -590,11 +595,12 @@ function updateCartBadge(){
   el.textContent = qty;
   el.hidden = qty === 0;
 }
-function addToCart(name, variation, price){
+function addToCart(name, variation, price, qty){
+  qty = qty && qty > 0 ? qty : 1;
   var priceNum = parsePrice(price);
   var existing = cart.find(function(it){ return it.name===name && it.variation===variation; });
-  if(existing) existing.qty += 1;
-  else cart.push({ name: name, variation: variation, price: price, priceNum: priceNum, qty: 1 });
+  if(existing) existing.qty += qty;
+  else cart.push({ name: name, variation: variation, price: price, priceNum: priceNum, qty: qty });
   updateCartBadge();
 }
 function buildCartMessage(){
@@ -799,6 +805,13 @@ function vestuarioPrice(p){
   }
   return p.price;
 }
+function renderProductName(name){
+  var lines = (name || '').split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l !== ''; });
+  if(lines.length <= 1) return lines[0] || '';
+  var title = lines[0];
+  var sub = lines.slice(1).join('<br>');
+  return title + '<span class="prod-name-sub">' + sub + '</span>';
+}
 function infoHtml(p){
   if(!p.info) return '';
   return '<p class="prod-info">'+p.info+'</p>';
@@ -810,9 +823,9 @@ function productCardHtml(p, i, opts){
   var tag = opts.tag ? '<span class="tag tag-new">Novo</span>' : '';
   if(p.productType === 'vestuario'){
     var img = p.coverPhoto ? '<img src="'+p.coverPhoto+'" alt="" class="gallery-photo active">' : '<div class="grid-bg" style="opacity:.3"></div>';
-    return '<article class="prod vestuario-prod" data-idx="'+i+'"><div class="prod-img">'+img+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+p.name+'</h3>'+infoHtml(p)+vestuarioCardExtras(p, i)+'<div class="prod-foot"><span class="prod-price" id="vestPrice'+i+'">'+vestuarioPrice(p)+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
+    return '<article class="prod vestuario-prod" data-idx="'+i+'"><div class="prod-img">'+img+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+renderProductName(p.name)+'</h3>'+infoHtml(p)+vestuarioCardExtras(p, i)+'<div class="qty-stepper" data-idx="'+i+'"><button type="button" class="qty-minus">−</button><span class="qty-value">1</span><button type="button" class="qty-plus">+</button></div><div class="prod-foot"><span class="prod-price" id="vestPrice'+i+'">'+vestuarioPrice(p)+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
   }
-  return '<article class="prod" data-idx="'+i+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+p.name+'</h3>'+infoHtml(p)+variationSelectHtml(p)+'<div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
+  return '<article class="prod" data-idx="'+i+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+renderProductName(p.name)+'</h3>'+infoHtml(p)+variationSelectHtml(p)+'<div class="qty-stepper" data-idx="'+i+'"><button type="button" class="qty-minus">−</button><span class="qty-value">1</span><button type="button" class="qty-plus">+</button></div><div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
 }
 function renderProducts(){
   var grid = document.getElementById('prodsGrid');
@@ -1165,7 +1178,7 @@ function renderProductForm(editProduct){
     '<button type="button" class="back-link" id="adminBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg> Voltar ao painel</button>' +
     '<h2>Produtos</h2>' + productsHtml +
     (editingProductId ? '<p style="color:var(--primary);font-size:12px;font-weight:700;margin:14px 0;">Editando "'+editProduct.name+'"</p>' : '') +
-    '<div class="field" style="margin-top:10px;"><label>Nome do produto</label><input id="pName" placeholder="Ex: Camiseta Heart 8-Bit" value="'+(editProduct ? editProduct.name.replace(/"/g,'&quot;') : '')+'"></div>' +
+    '<div class="field" style="margin-top:10px;"><label>Nome do produto (aperte Enter para criar uma linha de subtítulo)</label><textarea id="pName" rows="2" placeholder="Ex: Camiseta Heart 8-Bit">'+(editProduct ? editProduct.name : '')+'</textarea></div>' +
     '<div class="field" id="pPriceField"><label>Preço</label><input id="pPrice" placeholder="Ex: R$ 129" value="'+(editProduct ? editProduct.price.replace(/"/g,'&quot;') : '')+'"></div>' +
     '<div class="field"><label>Categoria</label>' +
     '<select id="pCategorySelect"><option value="">Sem categoria</option>' + categoryOptionsHtml + '<option value="__new__">+ Nova categoria...</option></select>' +
@@ -1564,10 +1577,26 @@ document.addEventListener('click', function(e){
       var sel = card0 ? card0.querySelector('.var-select') : null;
       variation = sel ? sel.value : p.variations[0].label;
     }
-    addToCart(p.name, variation, price);
+    var qtyEl = card0 ? card0.querySelector('.qty-value') : null;
+    var qty = qtyEl ? parseInt(qtyEl.textContent, 10) || 1 : 1;
+    addToCart(p.name, variation, price, qty);
+    if(qtyEl) qtyEl.textContent = '1';
     var original = addBtn.textContent;
     addBtn.textContent = 'Adicionado ✓';
     setTimeout(function(){ addBtn.textContent = original; }, 1200);
+    return;
+  }
+
+  var qtyBtn = e.target.closest('.qty-minus, .qty-plus');
+  if(qtyBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    var stepper = qtyBtn.closest('.qty-stepper');
+    var valEl = stepper.querySelector('.qty-value');
+    var current = parseInt(valEl.textContent, 10) || 1;
+    if(qtyBtn.classList.contains('qty-plus')) current = Math.min(current + 1, 99);
+    else current = Math.max(current - 1, 1);
+    valEl.textContent = current;
     return;
   }
 
