@@ -765,7 +765,7 @@ function vestuarioCardExtras(p, i){
         (e.photo ? '<img src="'+e.photo+'" alt="">' : '') + '</button>';
     }).join('') +
     '</div>' +
-    '<p class="estampa-label" style="color:var(--muted-foreground)">Toque numa estampa para escolher e ver com zoom</p>'
+    '<p class="estampa-label" style="color:var(--muted-foreground)">Toque numa estampa para escolher</p>'
   ) : '';
   var tamanhoBoxes = tamanhos.length ? (
     '<p class="field-mini-label">Tamanho</p>' +
@@ -986,6 +986,18 @@ function getCategories(){
   return SITE_CATEGORIES.slice();
 }
 
+function getKnownSizes(){
+  var sizes = [];
+  PRODUCTS.forEach(function(p){
+    if(p.productType === 'vestuario' && p.tamanhos){
+      p.tamanhos.forEach(function(t){
+        if(t.size && sizes.indexOf(t.size) === -1) sizes.push(t.size);
+      });
+    }
+  });
+  return sizes;
+}
+
 function renderPhotoSlots(){
   var wrap = document.getElementById('noVarPhotos');
   if(!wrap) return;
@@ -1154,7 +1166,7 @@ function renderProductForm(editProduct){
     '<h2>Produtos</h2>' + productsHtml +
     (editingProductId ? '<p style="color:var(--primary);font-size:12px;font-weight:700;margin:14px 0;">Editando "'+editProduct.name+'"</p>' : '') +
     '<div class="field" style="margin-top:10px;"><label>Nome do produto</label><input id="pName" placeholder="Ex: Camiseta Heart 8-Bit" value="'+(editProduct ? editProduct.name.replace(/"/g,'&quot;') : '')+'"></div>' +
-    '<div class="field"><label>Preço</label><input id="pPrice" placeholder="Ex: R$ 129" value="'+(editProduct ? editProduct.price.replace(/"/g,'&quot;') : '')+'"></div>' +
+    '<div class="field" id="pPriceField"><label>Preço</label><input id="pPrice" placeholder="Ex: R$ 129" value="'+(editProduct ? editProduct.price.replace(/"/g,'&quot;') : '')+'"></div>' +
     '<div class="field"><label>Categoria</label>' +
     '<select id="pCategorySelect"><option value="">Sem categoria</option>' + categoryOptionsHtml + '<option value="__new__">+ Nova categoria...</option></select>' +
     '<input id="pCategoryNew" type="text" placeholder="Nome da nova categoria" style="margin-top:8px;'+(hasMatchingCategory?'display:none;':'')+'"></div>' +
@@ -1210,6 +1222,14 @@ function renderProductForm(editProduct){
     document.getElementById('varSection').style.display = (!vestNow && varChecked) ? '' : 'none';
     document.getElementById('noVarPhotos').style.display = (vestNow || varChecked) ? 'none' : '';
     document.getElementById('pHasVar').closest('.field').style.display = vestNow ? 'none' : '';
+    document.getElementById('pPriceField').style.display = vestNow ? 'none' : '';
+    if(vestNow && !editingProductId && pendingTamanhos.length === 0){
+      var knownSizes = getKnownSizes();
+      if(knownSizes.length){
+        pendingTamanhos = knownSizes.map(function(s){ return { size: s, price: '' }; });
+        renderTamanhosList();
+      }
+    }
   }
   refreshFormMode();
 
@@ -1265,7 +1285,14 @@ function renderProductForm(editProduct){
     var hasVar = vestNow ? false : document.getElementById('pHasVar').checked;
     var errEl = document.getElementById('prodError');
     errEl.textContent = '';
-    if(!name || !price){ errEl.textContent = 'Preencha nome e preço.'; return; }
+    if(!name){ errEl.textContent = 'Preencha o nome do produto.'; return; }
+    if(vestNow){
+      var filledSizes = pendingTamanhos.filter(function(t){ return t.size && t.price; });
+      if(!filledSizes.length){ errEl.textContent = 'Adicione pelo menos um tamanho com preço.'; return; }
+      price = price || filledSizes[0].price;
+    } else if(!price){
+      errEl.textContent = 'Preencha o preço.'; return;
+    }
 
     var filesToCheck = [];
     var coverFile = vestNow
@@ -1562,12 +1589,6 @@ document.addEventListener('click', function(e){
     if(mainImg && prod.estampas[ei2].photo) mainImg.src = prod.estampas[ei2].photo;
     var label = card1 ? card1.querySelector('.estampa-label') : null;
     if(label){ label.textContent = 'Estampa: ' + (prod.estampas[ei2].name || ''); label.style.color = 'var(--primary)'; }
-    if(prod.estampas[ei2].photo){
-      var zo1 = document.getElementById('zoomOverlay');
-      var zi1 = document.getElementById('zoomImg');
-      zi1.src = prod.estampas[ei2].photo;
-      zo1.hidden = false;
-    }
     return;
   }
 
