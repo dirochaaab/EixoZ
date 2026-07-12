@@ -152,6 +152,13 @@
   @keyframes cart-badge-pop{0%{transform:scale(0)}65%{transform:scale(1.2)}100%{transform:scale(1)}}
   .var-select{width:100%;margin-top:8px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--foreground);font-size:12px}
   .tamanho-select,.cor-select{width:100%;margin-top:8px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--foreground);font-size:12px}
+  .field-mini-label{margin-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted-foreground)}
+  .tamanho-picker{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .tamanho-box{min-width:38px;height:34px;padding:0 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--secondary);color:var(--foreground);font-family:"Orbitron";font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+  .tamanho-box:hover{border-color:var(--primary)}
+  .tamanho-box.active{border-color:var(--primary);background:oklch(0.72 0.19 235 / .15);color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+  .size-chart-link{display:block;margin-top:8px;background:none;border:none;padding:0;font-size:11px;color:var(--primary);text-decoration:underline;cursor:pointer;text-align:left}
+  .prod-info{margin-top:6px;font-size:12px;color:var(--muted-foreground);line-height:1.4}
   .estampa-picker{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
   .estampa-thumb{width:34px;height:34px;border-radius:6px;border:1.5px solid var(--border);overflow:hidden;padding:0;cursor:pointer;background:var(--secondary)}
   .estampa-thumb img{width:100%;height:100%;object-fit:cover}
@@ -238,7 +245,7 @@
 
   /* Banner carousel */
   .banner-carousel{position:relative;width:100%;max-width:1200px;margin:0 auto;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
-  .banner-track{position:relative;aspect-ratio:3/1}
+  .banner-track{position:relative;aspect-ratio:2.2/1}
   .banner-slide{position:absolute;inset:0;opacity:0;transition:opacity .8s ease;display:flex;align-items:center;justify-content:center;background:oklch(0.14 0.03 260 / .6)}
   .banner-slide.active{opacity:1}
   .banner-placeholder{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted-foreground);border:1px dashed var(--border);padding:24px 40px;border-radius:10px}
@@ -758,17 +765,20 @@ function vestuarioCardExtras(p, i){
         (e.photo ? '<img src="'+e.photo+'" alt="">' : '') + '</button>';
     }).join('') +
     '</div>' +
-    '<p class="estampa-label" style="color:var(--muted-foreground)">Toque numa estampa acima para escolher</p>'
+    '<p class="estampa-label" style="color:var(--muted-foreground)">Toque numa estampa para escolher e ver com zoom</p>'
   ) : '';
-  var tamanhoSel = tamanhos.length ? (
-    '<select class="tamanho-select" data-idx="'+i+'">' +
-    '<option value="">Selecione o tamanho</option>' +
+  var tamanhoBoxes = tamanhos.length ? (
+    '<p class="field-mini-label">Tamanho</p>' +
+    '<div class="tamanho-picker" data-idx="'+i+'">' +
     tamanhos.map(function(t){
       var safe = (t.size||'').replace(/"/g,'&quot;');
-      return '<option value="'+safe+'">'+(t.size||'Tamanho')+'</option>';
-    }).join('') + '</select>'
+      return '<button type="button" class="tamanho-box" data-size="'+safe+'">'+(t.size||'?')+'</button>';
+    }).join('') +
+    '</div>'
   ) : '';
+  var sizeChartLink = p.sizeChart ? '<button type="button" class="size-chart-link" data-chart="'+i+'">Ver tabela de tamanhos</button>' : '';
   var corSel = cores.length ? (
+    '<p class="field-mini-label">Cor</p>' +
     '<select class="cor-select" data-idx="'+i+'">' +
     '<option value="">Selecione a cor</option>' +
     cores.map(function(c){
@@ -776,7 +786,7 @@ function vestuarioCardExtras(p, i){
       return '<option value="'+safe+'">'+(c.name||'Cor')+'</option>';
     }).join('') + '</select>'
   ) : '';
-  return picker + tamanhoSel + corSel + '<p class="error-msg vest-error" id="vestError'+i+'"></p>';
+  return picker + tamanhoBoxes + sizeChartLink + corSel + '<p class="error-msg vest-error" id="vestError'+i+'"></p>';
 }
 function vestuarioPrice(p){
   if(p.tamanhos && p.tamanhos.length){
@@ -789,6 +799,10 @@ function vestuarioPrice(p){
   }
   return p.price;
 }
+function infoHtml(p){
+  if(!p.info) return '';
+  return '<p class="prod-info">'+p.info+'</p>';
+}
 function productCardHtml(p, i, opts){
   opts = opts || {};
   var catLabel = opts.catLabel || p.category || 'Geral';
@@ -796,9 +810,9 @@ function productCardHtml(p, i, opts){
   var tag = opts.tag ? '<span class="tag tag-new">Novo</span>' : '';
   if(p.productType === 'vestuario'){
     var img = p.coverPhoto ? '<img src="'+p.coverPhoto+'" alt="" class="gallery-photo active">' : '<div class="grid-bg" style="opacity:.3"></div>';
-    return '<article class="prod vestuario-prod" data-idx="'+i+'"><div class="prod-img">'+img+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+p.name+'</h3>'+vestuarioCardExtras(p, i)+'<div class="prod-foot"><span class="prod-price" id="vestPrice'+i+'">'+vestuarioPrice(p)+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
+    return '<article class="prod vestuario-prod" data-idx="'+i+'"><div class="prod-img">'+img+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+p.name+'</h3>'+infoHtml(p)+vestuarioCardExtras(p, i)+'<div class="prod-foot"><span class="prod-price" id="vestPrice'+i+'">'+vestuarioPrice(p)+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
   }
-  return '<article class="prod" data-idx="'+i+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+p.name+'</h3>'+variationSelectHtml(p)+'<div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
+  return '<article class="prod" data-idx="'+i+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+p.name+'</h3>'+infoHtml(p)+variationSelectHtml(p)+'<div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
 }
 function renderProducts(){
   var grid = document.getElementById('prodsGrid');
@@ -904,7 +918,8 @@ async function loadSiteData(){
         variations: Array.isArray(v.variations) ? v.variations : [],
         estampas: Array.isArray(v.estampas) ? v.estampas : [],
         tamanhos: Array.isArray(v.tamanhos) ? v.tamanhos : [],
-        cores: Array.isArray(v.cores) ? v.cores : []
+        cores: Array.isArray(v.cores) ? v.cores : [],
+        sizeChart: v.sizeChart || null
       };
     });
   } catch(e){ console.warn('Produtos indisponíveis.', e); }
@@ -1164,6 +1179,9 @@ function renderProductForm(editProduct){
     '<label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted-foreground);margin:16px 0 8px;">Tamanhos e preços (cada tamanho pode ter um preço diferente)</label>' +
     '<div id="tamanhosList"></div>' +
     '<button type="button" class="btn-secondary" id="addTamanho" style="width:100%;margin-bottom:14px;">+ Adicionar tamanho</button>' +
+    '<div class="field"><label>Imagem com a tabela de tamanhos (opcional)</label>' +
+    (editProduct && isVest && editProduct.sizeChart ? '<img class="admin-thumb" src="'+editProduct.sizeChart+'" alt="">' : '') +
+    '<input type="file" accept="image/*" id="pSizeChart"></div>' +
     '<label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted-foreground);margin:16px 0 8px;">Cores (opcional)</label>' +
     '<div id="coresList"></div>' +
     '<button type="button" class="btn-secondary" id="addCor" style="width:100%;margin-bottom:14px;">+ Adicionar cor</button>' +
@@ -1253,8 +1271,10 @@ function renderProductForm(editProduct){
     var coverFile = vestNow
       ? (document.getElementById('pCoverPhotoVest') ? document.getElementById('pCoverPhotoVest').files[0] : null)
       : (document.getElementById('pCoverPhoto') ? document.getElementById('pCoverPhoto').files[0] : null);
+    var sizeChartFile = vestNow && document.getElementById('pSizeChart') ? document.getElementById('pSizeChart').files[0] : null;
     if(vestNow){
       if(coverFile) filesToCheck.push(coverFile);
+      if(sizeChartFile) filesToCheck.push(sizeChartFile);
       pendingEstampas.forEach(function(e){ if(e.file) filesToCheck.push(e.file); });
     } else if(hasVar){
       if(coverFile) filesToCheck.push(coverFile);
@@ -1277,10 +1297,12 @@ function renderProductForm(editProduct){
         hasVariations: hasVar,
         productType: vestNow ? 'vestuario' : 'default',
         coverPhoto: editProduct ? (editProduct.coverPhoto || null) : null,
+        sizeChart: editProduct ? (editProduct.sizeChart || null) : null,
         photos: [], variations: [], estampas: [], tamanhos: [], cores: []
       };
       if(vestNow){
         if(coverFile) payload.coverPhoto = await compressImage(coverFile, 700, 0.72);
+        if(sizeChartFile) payload.sizeChart = await compressImage(sizeChartFile, 800, 0.75);
         for(var ei=0; ei<pendingEstampas.length; ei++){
           var est = pendingEstampas[ei];
           var photo = null;
@@ -1497,14 +1519,15 @@ document.addEventListener('click', function(e){
         var ei = parseInt(activeThumb.getAttribute('data-ei'), 10);
         if(p.estampas[ei]) parts.push('Estampa: ' + (p.estampas[ei].name || ''));
       }
-      var tamSel = card0 ? card0.querySelector('.tamanho-select') : null;
-      if(p.tamanhos && p.tamanhos.length && (!tamSel || !tamSel.value)){
+      var tamBox = card0 ? card0.querySelector('.tamanho-box.active') : null;
+      if(p.tamanhos && p.tamanhos.length && !tamBox){
         if(errEl0) errEl0.textContent = 'Escolha um tamanho antes de continuar.';
         return;
       }
-      if(tamSel && tamSel.value){
-        parts.push('Tamanho: ' + tamSel.value);
-        var t = (p.tamanhos || []).find(function(t){ return t.size === tamSel.value; });
+      if(tamBox){
+        var sizeVal = tamBox.getAttribute('data-size');
+        parts.push('Tamanho: ' + sizeVal);
+        var t = (p.tamanhos || []).find(function(t){ return t.size === sizeVal; });
         if(t && t.price) price = t.price;
       }
       var corSel = card0 ? card0.querySelector('.cor-select') : null;
@@ -1539,6 +1562,46 @@ document.addEventListener('click', function(e){
     if(mainImg && prod.estampas[ei2].photo) mainImg.src = prod.estampas[ei2].photo;
     var label = card1 ? card1.querySelector('.estampa-label') : null;
     if(label){ label.textContent = 'Estampa: ' + (prod.estampas[ei2].name || ''); label.style.color = 'var(--primary)'; }
+    if(prod.estampas[ei2].photo){
+      var zo1 = document.getElementById('zoomOverlay');
+      var zi1 = document.getElementById('zoomImg');
+      zi1.src = prod.estampas[ei2].photo;
+      zo1.hidden = false;
+    }
+    return;
+  }
+
+  var tamanhoBox = e.target.closest('.tamanho-box');
+  if(tamanhoBox){
+    e.preventDefault();
+    e.stopPropagation();
+    var tpicker = tamanhoBox.closest('.tamanho-picker');
+    var tIdx2 = parseInt(tpicker.getAttribute('data-idx'), 10);
+    var tp2 = PRODUCTS[tIdx2];
+    if(!tp2) return;
+    tpicker.querySelectorAll('.tamanho-box').forEach(function(b){ b.classList.remove('active'); });
+    tamanhoBox.classList.add('active');
+    var errEl2 = document.getElementById('vestError' + tIdx2);
+    if(errEl2) errEl2.textContent = '';
+    var size = tamanhoBox.getAttribute('data-size');
+    var tm2 = (tp2.tamanhos || []).find(function(t){ return t.size === size; });
+    var priceEl2 = document.getElementById('vestPrice' + tIdx2);
+    if(tm2 && priceEl2) priceEl2.textContent = tm2.price;
+    return;
+  }
+
+  var chartLink = e.target.closest('.size-chart-link');
+  if(chartLink){
+    e.preventDefault();
+    e.stopPropagation();
+    var cIdx = parseInt(chartLink.getAttribute('data-chart'), 10);
+    var cp = PRODUCTS[cIdx];
+    if(cp && cp.sizeChart){
+      var zo2 = document.getElementById('zoomOverlay');
+      var zi2 = document.getElementById('zoomImg');
+      zi2.src = cp.sizeChart;
+      zo2.hidden = false;
+    }
     return;
   }
 
@@ -1561,17 +1624,6 @@ document.addEventListener('click', function(e){
 });
 
 document.addEventListener('change', function(e){
-  var tamSel = e.target.closest('.tamanho-select');
-  if(tamSel){
-    var tIdx = parseInt(tamSel.getAttribute('data-idx'), 10);
-    var tp = PRODUCTS[tIdx];
-    if(tp && tp.tamanhos){
-      var tm = tp.tamanhos.find(function(t){ return t.size === tamSel.value; });
-      var priceEl = document.getElementById('vestPrice' + tIdx);
-      if(tm && priceEl) priceEl.textContent = tm.price;
-    }
-    return;
-  }
   var sel = e.target.closest('.var-select');
   if(!sel) return;
   var card = sel.closest('.prod');
