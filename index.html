@@ -275,6 +275,11 @@
   .prod{position:relative;overflow:hidden;border-radius:12px;border:1px solid var(--border);background:var(--card);transition:all .2s}
   .prod:hover{transform:translateY(-4px);border-color:oklch(0.72 0.19 235 / .6);box-shadow:var(--shadow-neon)}
   .prod-img{position:relative;aspect-ratio:1;overflow:hidden;background:linear-gradient(135deg, var(--secondary), var(--card), var(--background));display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border)}
+  .link-copy-btn{position:absolute;top:8px;right:8px;z-index:3;display:flex;align-items:center;gap:4px;padding:5px 9px;border-radius:6px;background:oklch(0.09 0.02 260 / .75);border:1px solid oklch(0.72 0.19 235 / .4);color:var(--primary);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
+  .link-copy-btn svg{width:12px;height:12px}
+  .link-copy-btn:hover{border-color:var(--primary);background:oklch(0.09 0.02 260 / .9)}
+  @keyframes linked-highlight-pulse{0%,100%{box-shadow:0 0 0 2px var(--primary), var(--shadow-neon)}50%{box-shadow:0 0 0 2px var(--accent), 0 0 30px oklch(0.63 0.24 25 / .5)}}
+  .linked-highlight{animation:linked-highlight-pulse 1.1s ease-in-out 2}
   .prod-img .num{
     position:absolute;left:10px;bottom:10px;z-index:2;
     font-family:"Orbitron";font-size:11px;font-weight:700;letter-spacing:.1em;
@@ -598,6 +603,32 @@ var PRODUCTS = [];
 
 function waLink(number, text){ return 'https://wa.me/' + number + '?text=' + encodeURIComponent(text); }
 
+function buildProductUrl(productId){
+  return window.location.origin + window.location.pathname + '?produto=' + encodeURIComponent(productId);
+}
+function copyTextToClipboard(text, btn){
+  var original = btn.textContent;
+  function showCopied(){
+    btn.textContent = 'Copiado!';
+    setTimeout(function(){ btn.textContent = original; }, 1600);
+  }
+  function fallback(){
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); showCopied(); } catch(e) { btn.textContent = 'Copie manualmente'; }
+    document.body.removeChild(ta);
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(showCopied).catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
 var cart = [];
 function parsePrice(str){
   if(!str) return 0;
@@ -770,14 +801,18 @@ function galleryHtml(photos){
 function productImgHtml(p){
   return galleryHtml(getProductPhotos(p, p.hasVariations && p.variations && p.variations[0] ? (p.variations[0].label || 'Modelo') : null));
 }
-function variationSelectHtml(p){
+function variationPickerHtml(p, i){
   if(!p.hasVariations || !p.variations || !p.variations.length) return '';
-  return '<select class="var-select" onclick="event.stopPropagation()">' +
-    p.variations.map(function(v){
-      var label = (v.label || 'Modelo').replace(/"/g,'&quot;');
-      return '<option value="'+label+'">'+label+'</option>';
+  var picker = '<div class="estampa-picker" data-idx="'+i+'" data-mode="variation">' +
+    p.variations.map(function(v, vi){
+      var safeLabel = (v.label || 'Modelo').replace(/"/g,'&quot;');
+      var thumb = v.photos && v.photos[0] ? v.photos[0] : '';
+      return '<button type="button" class="estampa-thumb'+(vi===0?' active':'')+'" data-ei="'+vi+'" title="'+safeLabel+'">' +
+        (thumb ? '<img src="'+thumb+'" alt="">' : '') + '</button>';
     }).join('') +
-    '</select>';
+    '</div>';
+  var firstLabel = (p.variations[0].label || 'Modelo').replace(/</g,'&lt;');
+  return picker + '<p class="estampa-label">Modelo: '+firstLabel+'</p>';
 }
 function vestuarioCardExtras(p, i){
   var estampas = p.estampas || [];
@@ -845,11 +880,14 @@ function productCardHtml(p, i, opts){
   var catLabel = opts.catLabel || p.category || 'Geral';
   var numLabel = String((opts.num != null ? opts.num : i) + 1).padStart(2,'0');
   var tag = opts.tag ? '<span class="tag tag-new">Novo</span>' : '';
+  var linkBtn = p.id
+    ? '<button type="button" class="link-copy-btn" data-link-id="'+p.id+'" title="Copiar link do produto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.4l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.4l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg> Link</button>'
+    : '';
   if(p.productType === 'vestuario'){
     var img = p.coverPhoto ? '<img src="'+p.coverPhoto+'" alt="" class="gallery-photo active">' : '<div class="grid-bg" style="opacity:.3"></div>';
-    return '<article class="prod vestuario-prod" data-idx="'+i+'"><div class="prod-img">'+img+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+renderProductName(p.name)+'</h3>'+infoHtml(p)+vestuarioCardExtras(p, i)+'<div class="qty-stepper" data-idx="'+i+'"><button type="button" class="qty-minus">−</button><span class="qty-value">1</span><button type="button" class="qty-plus">+</button></div><div class="prod-foot"><span class="prod-price" id="vestPrice'+i+'">'+vestuarioPrice(p)+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
+    return '<article class="prod vestuario-prod" data-idx="'+i+'" data-pid="'+(p.id||'')+'"><div class="prod-img">'+img+'<span class="num">'+numLabel+'</span>'+tag+linkBtn+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+renderProductName(p.name)+'</h3>'+infoHtml(p)+vestuarioCardExtras(p, i)+'<div class="qty-stepper" data-idx="'+i+'"><button type="button" class="qty-minus">−</button><span class="qty-value">1</span><button type="button" class="qty-plus">+</button></div><div class="prod-foot"><span class="prod-price" id="vestPrice'+i+'">'+vestuarioPrice(p)+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
   }
-  return '<article class="prod" data-idx="'+i+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+numLabel+'</span>'+tag+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+renderProductName(p.name)+'</h3>'+infoHtml(p)+variationSelectHtml(p)+'<div class="qty-stepper" data-idx="'+i+'"><button type="button" class="qty-minus">−</button><span class="qty-value">1</span><button type="button" class="qty-plus">+</button></div><div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
+  return '<article class="prod" data-idx="'+i+'" data-pid="'+(p.id||'')+'"><div class="prod-img">'+productImgHtml(p)+'<span class="num">'+numLabel+'</span>'+tag+linkBtn+'</div><div class="prod-body"><p class="prod-cat">'+catLabel+'</p><h3 class="prod-name">'+renderProductName(p.name)+'</h3>'+infoHtml(p)+variationPickerHtml(p, i)+'<div class="qty-stepper" data-idx="'+i+'"><button type="button" class="qty-minus">−</button><span class="qty-value">1</span><button type="button" class="qty-plus">+</button></div><div class="prod-foot"><span class="prod-price">'+p.price+'</span><button class="btn btn-outline cart-add-btn" type="button" data-idx="'+i+'">+ Cart</button></div></div></article>';
 }
 function renderProducts(){
   var grid = document.getElementById('prodsGrid');
@@ -868,6 +906,7 @@ function renderProducts(){
 
   var byCat = {};
   PRODUCTS.forEach(function(p, i){
+    if(p.active === false) return;
     var c = p.category || 'Sem categoria';
     if(!byCat[c]) byCat[c] = [];
     byCat[c].push({ p: p, i: i });
@@ -885,9 +924,10 @@ function renderDrops(){
   var grid = document.getElementById('dropsGrid');
   if(!PRODUCTS.length) return;
   var byCategory = {};
-  PRODUCTS.forEach(function(p,i){ if(p.category) byCategory[p.category] = {p:p, i:i}; });
+  PRODUCTS.forEach(function(p,i){ if(p.category && p.active !== false) byCategory[p.category] = {p:p, i:i}; });
   var latest = Object.values(byCategory);
-  var list = (latest.length ? latest : PRODUCTS.map(function(p,i){ return {p:p, i:i}; })).slice(-6);
+  var fallbackList = PRODUCTS.map(function(p,i){ return {p:p, i:i}; }).filter(function(item){ return item.p.active !== false; });
+  var list = (latest.length ? latest : fallbackList).slice(-6);
   grid.innerHTML = list.map(function(item, n){
     return productCardHtml(item.p, item.i, { catLabel: item.p.category || 'Geral', num: n, tag: true });
   }).join('');
@@ -951,6 +991,7 @@ async function loadSiteData(){
         category: v.category || '',
         hasVariations: !!v.hasVariations,
         productType: v.productType || 'default',
+        active: v.active !== false,
         coverPhoto: v.coverPhoto || null,
         photos: Array.isArray(v.photos) ? v.photos : [],
         variations: Array.isArray(v.variations) ? v.variations : [],
@@ -1187,7 +1228,9 @@ function renderProductForm(editProduct){
     : [];
 
   var productsHtml = PRODUCTS.map(function(p,i){
-    return '<div class="admin-product-row"><span>'+p.name+' — '+p.price+(p.category ? ' · '+p.category : '')+'</span>' +
+    var isActive = p.active !== false;
+    return '<div class="admin-product-row"><span>'+p.name+' — '+p.price+(p.category ? ' · '+p.category : '')+(isActive ? '' : ' <em style="color:var(--muted-foreground);font-style:normal;">(inativo)</em>')+'</span>' +
+      '<button type="button" class="'+(isActive ? '' : 'danger')+'" data-toggle-active="'+i+'">'+(isActive ? 'Ativo' : 'Inativo')+'</button>' +
       '<button type="button" data-edit="'+i+'">Editar</button>' +
       '<button type="button" class="danger" data-del="'+i+'">Excluir</button></div>';
   }).join('') || '<p style="color:var(--muted-foreground);font-size:13px;">Nenhum produto ainda.</p>';
@@ -1297,6 +1340,21 @@ function renderProductForm(editProduct){
   });
   if(document.getElementById('pCancelEdit')) document.getElementById('pCancelEdit').addEventListener('click', function(){ renderProductForm(); });
 
+  modalBody.querySelectorAll('[data-toggle-active]').forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      var idx = parseInt(btn.getAttribute('data-toggle-active'),10);
+      var p = PRODUCTS[idx];
+      if(!p || !p.id) return;
+      btn.disabled = true;
+      try {
+        await updateDoc(doc(db,'products',p.id), { active: !(p.active !== false) });
+        await loadSiteData();
+        renderProductForm();
+      } catch(e){
+        btn.disabled = false;
+      }
+    });
+  });
   modalBody.querySelectorAll('[data-del]').forEach(function(btn){
     btn.addEventListener('click', async function(){
       var idx = parseInt(btn.getAttribute('data-del'),10);
@@ -1568,6 +1626,15 @@ function setGalleryIndex(gallery, idx){
 }
 
 document.addEventListener('click', function(e){
+  var linkBtn = e.target.closest('.link-copy-btn');
+  if(linkBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    var pid = linkBtn.getAttribute('data-link-id');
+    if(pid) copyTextToClipboard(buildProductUrl(pid), linkBtn);
+    return;
+  }
+
   var zoomTarget = e.target.closest('.prod-img img, .prod-img .gallery-photo');
   if(zoomTarget && !e.target.closest('.gallery-arrow') && !e.target.closest('.gallery-dot')){
     var zo = document.getElementById('zoomOverlay');
@@ -1613,8 +1680,13 @@ document.addEventListener('click', function(e){
       if(corSel && corSel.value) parts.push('Cor: ' + corSel.value);
       variation = parts.join(' · ') || null;
     } else if(p.hasVariations && p.variations && p.variations.length){
-      var sel = card0 ? card0.querySelector('.var-select') : null;
-      variation = sel ? sel.value : p.variations[0].label;
+      var activeVarThumb = card0 ? card0.querySelector('.estampa-picker[data-mode="variation"] .estampa-thumb.active') : null;
+      if(activeVarThumb){
+        var vei = parseInt(activeVarThumb.getAttribute('data-ei'), 10);
+        variation = (p.variations[vei] && p.variations[vei].label) || p.variations[0].label;
+      } else {
+        variation = p.variations[0].label;
+      }
     }
     var qtyEl = card0 ? card0.querySelector('.qty-value') : null;
     var qty = qtyEl ? parseInt(qtyEl.textContent, 10) || 1 : 1;
@@ -1647,15 +1719,33 @@ document.addEventListener('click', function(e){
     var pIdx = parseInt(picker.getAttribute('data-idx'), 10);
     var ei2 = parseInt(estampaBtn.getAttribute('data-ei'), 10);
     var prod = PRODUCTS[pIdx];
-    if(!prod || !prod.estampas || !prod.estampas[ei2]) return;
+    if(!prod) return;
+    var card1 = picker.closest('.prod');
+    var label = card1 ? card1.querySelector('.estampa-label') : null;
+
+    if(picker.getAttribute('data-mode') === 'variation'){
+      var variation = prod.variations && prod.variations[ei2];
+      if(!variation) return;
+      picker.querySelectorAll('.estampa-thumb').forEach(function(b){ b.classList.remove('active'); });
+      estampaBtn.classList.add('active');
+      var photos = getProductPhotos(prod, variation.label || 'Modelo');
+      var imgBox = card1 ? card1.querySelector('.prod-img') : null;
+      if(imgBox){
+        var oldGallery = imgBox.querySelector('.gallery, .grid-bg');
+        if(oldGallery) oldGallery.remove();
+        imgBox.insertAdjacentHTML('afterbegin', galleryHtml(photos));
+      }
+      if(label) label.textContent = 'Modelo: ' + (variation.label || '');
+      return;
+    }
+
+    if(!prod.estampas || !prod.estampas[ei2]) return;
     picker.querySelectorAll('.estampa-thumb').forEach(function(b){ b.classList.remove('active'); });
     estampaBtn.classList.add('active');
-    var card1 = picker.closest('.prod');
     var errEl1 = document.getElementById('vestError' + pIdx);
     if(errEl1) errEl1.textContent = '';
     var mainImg = card1 ? card1.querySelector('.prod-img img') : null;
     if(mainImg && prod.estampas[ei2].photo) mainImg.src = prod.estampas[ei2].photo;
-    var label = card1 ? card1.querySelector('.estampa-label') : null;
     if(label){ label.textContent = 'Estampa: ' + (prod.estampas[ei2].name || ''); label.style.color = 'var(--primary)'; }
     return;
   }
@@ -1713,28 +1803,40 @@ document.addEventListener('click', function(e){
   }
 });
 
-document.addEventListener('change', function(e){
-  var sel = e.target.closest('.var-select');
-  if(!sel) return;
-  var card = sel.closest('.prod');
-  if(!card) return;
-  var idx = parseInt(card.getAttribute('data-idx'), 10);
-  var p = PRODUCTS[idx];
-  if(!p) return;
-  var photos = getProductPhotos(p, sel.value);
-  var imgBox = card.querySelector('.prod-img');
-  var oldGallery = imgBox.querySelector('.gallery, .grid-bg');
-  if(oldGallery) oldGallery.remove();
-  imgBox.insertAdjacentHTML('afterbegin', galleryHtml(photos));
-});
-
 onAuthStateChanged(auth, function(user){
   if(!modalOverlay.hidden){
     if(user) renderAdminHome(); else renderLoginForm();
   }
 });
 
-loadSiteData();
+function handleDeepLinkProduct(){
+  var params = new URLSearchParams(window.location.search);
+  var pid = params.get('produto');
+  if(!pid) return;
+  var idx = PRODUCTS.findIndex(function(p){ return p.id === pid; });
+  if(idx === -1) return;
+  var product = PRODUCTS[idx];
+  var cat = product.category || 'Sem categoria';
+
+  window.__activeCategory = cat;
+  document.querySelectorAll('#catsGrid .cat').forEach(function(c){ c.classList.toggle('active', c.getAttribute('data-cat') === cat); });
+  document.querySelectorAll('#prodsGrid .category-group').forEach(function(g){ g.classList.toggle('active-group', g.getAttribute('data-cat-group') === cat); });
+  var hint = document.getElementById('catalogHint');
+  if(hint) hint.style.display = 'none';
+  document.getElementById('categorias-panel').classList.add('show');
+  document.getElementById('catalog-panel').classList.add('show');
+
+  setTimeout(function(){
+    var target = document.querySelector('#prodsGrid .prod[data-pid="'+pid+'"]');
+    if(target){
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('linked-highlight');
+      setTimeout(function(){ target.classList.remove('linked-highlight'); }, 2400);
+    }
+  }, 150);
+}
+
+loadSiteData().then(handleDeepLinkProduct);
 </script>
 </body>
 </html>
