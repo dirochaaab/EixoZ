@@ -55,6 +55,14 @@
   .muted{color:var(--muted-foreground)}
 
   /* Header */
+  .pix-bar{
+    width:100%;text-align:center;padding:9px 16px;
+    background:linear-gradient(90deg, oklch(0.72 0.19 235 / .15), oklch(0.63 0.24 25 / .15));
+    border-bottom:1px solid var(--border);
+    font-family:"Rajdhani",sans-serif;font-size:12.5px;letter-spacing:.03em;
+    color:var(--muted-foreground);
+  }
+  .pix-bar strong{color:var(--primary);font-weight:700}
   header{display:flex;align-items:center;justify-content:space-between;padding:20px}
   .logo-txt{font-family:"Orbitron";font-weight:900;font-size:20px;letter-spacing:.2em}
   nav{display:none;gap:32px;font-size:12px;text-transform:uppercase;letter-spacing:.2em;color:var(--muted-foreground)}
@@ -320,8 +328,10 @@
 <body>
 <div class="grid-bg"></div>
 
+<div class="pix-bar">Pedidos pagos no <strong>Pix</strong> têm <strong>5% de desconto</strong> no valor do produto</div>
+
 <header class="wrap">
-  <a href="#" class="logo-txt text-glow">EIXO<span class="accent">Z</span></a>
+  <a href="#" class="logo-txt text-glow" onclick="goHome(event)">EIXO<span class="accent">Z</span></a>
   <nav>
     <a href="#loja">Loja</a>
     <a href="#categorias" onclick="revealCategorias(event)">Categorias</a>
@@ -505,6 +515,11 @@
 
 <script>
 document.getElementById('yr').textContent = new Date().getFullYear();
+
+function goHome(e){
+  e.preventDefault();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 function revealCategorias(e){
   e.preventDefault();
@@ -1635,7 +1650,8 @@ document.addEventListener('click', function(e){
     var tIdx2 = parseInt(tpicker.getAttribute('data-idx'), 10);
     var tp2 = PRODUCTS[tIdx2];
     if(!tp2) return;
-    tpicker.querySelectorAll('.tamanho-box').forEach(function(b){ b.classList.remove('active'); });
+    var tcard = tamanhoBox.closest('.prod');
+    (tcard ? tcard.querySelectorAll('.tamanho-box') : tpicker.querySelectorAll('.tamanho-box')).forEach(function(b){ b.classList.remove('active'); });
     tamanhoBox.classList.add('active');
     var errEl2 = document.getElementById('vestError' + tIdx2);
     if(errEl2) errEl2.textContent = '';
