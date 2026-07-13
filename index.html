@@ -590,7 +590,7 @@ var auth = getAuth(app);
 var db = getFirestore(app);
 
 var RAW_MAX_MB = 15;
-var DOC_SAFE_LIMIT = 900000;
+var DOC_SAFE_LIMIT = 980000;
 
 var SITE_CONFIG = {
   instagramUrl: '#', tiktokUrl: '#',
@@ -1518,7 +1518,7 @@ function renderBannerForm(){
         var idx = parseInt(inp.getAttribute('data-i'),10);
         var removed = false;
         removeChecks.forEach(function(cb){ if(parseInt(cb.getAttribute('data-i'),10) === idx && cb.checked) removed = true; });
-        if(f) newImages[idx] = await compressImage(f, 1400, 0.85);
+        if(f) newImages[idx] = await compressImage(f, 1600, 0.93);
         else if(removed) newImages[idx] = null;
       }
       var newLinks = (SITE_CONFIG.bannerLinks || ['','','','','']).slice();
