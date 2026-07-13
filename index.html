@@ -1518,7 +1518,7 @@ function renderBannerForm(){
         var idx = parseInt(inp.getAttribute('data-i'),10);
         var removed = false;
         removeChecks.forEach(function(cb){ if(parseInt(cb.getAttribute('data-i'),10) === idx && cb.checked) removed = true; });
-        if(f) newImages[idx] = await compressImage(f, 640, 0.65);
+        if(f) newImages[idx] = await compressImage(f, 1400, 0.85);
         else if(removed) newImages[idx] = null;
       }
       var newLinks = (SITE_CONFIG.bannerLinks || ['','','','','']).slice();
