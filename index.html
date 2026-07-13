@@ -153,7 +153,9 @@
   .var-select{width:100%;margin-top:8px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--foreground);font-size:12px}
   .tamanho-select,.cor-select{width:100%;margin-top:8px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--foreground);font-size:12px}
   .field-mini-label{margin-top:10px;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted-foreground)}
-  .tamanho-picker{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .tamanho-picker{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+  .tamanho-picker-extra{margin-top:8px}
+  .tamanho-picker .size-chart-link{margin-top:0;margin-left:4px}
   .tamanho-box{min-width:38px;height:34px;padding:0 10px;border-radius:6px;border:1.5px solid var(--border);background:var(--secondary);color:var(--foreground);font-family:"Orbitron";font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
   .tamanho-box:hover{border-color:var(--primary)}
   .tamanho-box.active{border-color:var(--primary);background:oklch(0.72 0.19 235 / .15);color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
@@ -773,16 +775,20 @@ function vestuarioCardExtras(p, i){
     '</div>' +
     '<p class="estampa-label" style="color:var(--muted-foreground)">Toque numa estampa para escolher</p>'
   ) : '';
+  var regularSizes = tamanhos.filter(function(t){ return !/^g\d/i.test((t.size||'').trim()); });
+  var numberedSizes = tamanhos.filter(function(t){ return /^g\d/i.test((t.size||'').trim()); });
+  function sizeBoxHtml(t){
+    var safe = (t.size||'').replace(/"/g,'&quot;');
+    return '<button type="button" class="tamanho-box" data-size="'+safe+'">'+(t.size||'?')+'</button>';
+  }
+  var sizeChartLink = p.sizeChart ? '<button type="button" class="size-chart-link" data-chart="'+i+'">Ver tabela de tamanhos</button>' : '';
   var tamanhoBoxes = tamanhos.length ? (
     '<p class="field-mini-label">Tamanho</p>' +
-    '<div class="tamanho-picker" data-idx="'+i+'">' +
-    tamanhos.map(function(t){
-      var safe = (t.size||'').replace(/"/g,'&quot;');
-      return '<button type="button" class="tamanho-box" data-size="'+safe+'">'+(t.size||'?')+'</button>';
-    }).join('') +
-    '</div>'
-  ) : '';
-  var sizeChartLink = p.sizeChart ? '<button type="button" class="size-chart-link" data-chart="'+i+'">Ver tabela de tamanhos</button>' : '';
+    '<div class="tamanho-picker" data-idx="'+i+'">' + regularSizes.map(sizeBoxHtml).join('') + '</div>' +
+    (numberedSizes.length
+      ? '<div class="tamanho-picker tamanho-picker-extra" data-idx="'+i+'">' + numberedSizes.map(sizeBoxHtml).join('') + sizeChartLink + '</div>'
+      : sizeChartLink)
+  ) : sizeChartLink;
   var corSel = cores.length ? (
     '<p class="field-mini-label">Cor</p>' +
     '<select class="cor-select" data-idx="'+i+'">' +
@@ -792,7 +798,7 @@ function vestuarioCardExtras(p, i){
       return '<option value="'+safe+'">'+(c.name||'Cor')+'</option>';
     }).join('') + '</select>'
   ) : '';
-  return picker + tamanhoBoxes + sizeChartLink + corSel + '<p class="error-msg vest-error" id="vestError'+i+'"></p>';
+  return picker + tamanhoBoxes + corSel + '<p class="error-msg vest-error" id="vestError'+i+'"></p>';
 }
 function vestuarioPrice(p){
   if(p.tamanhos && p.tamanhos.length){
