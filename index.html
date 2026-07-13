@@ -704,7 +704,7 @@ function renderBanner(){
   var dotsWrap = document.querySelector('#bannerCarousel .banner-dots');
   track.innerHTML = SITE_CONFIG.bannerImages.map(function(src,i){
     var inner = src
-      ? '<img src="'+src+'" alt="Banner '+(i+1)+'" style="width:100%;height:100%;object-fit:cover">'
+      ? '<img src="'+src+'" alt="Banner '+(i+1)+'" style="width:100%;height:100%;object-fit:contain;background:oklch(0.08 0.02 260)">'
       : '<div class="banner-placeholder"><span class="plus">+</span><p>Banner '+(i+1)+'</p><small>Disponível apenas para a equipe</small></div>';
     return '<div class="banner-slide'+(i===0?' active':'')+'">'+inner+'</div>';
   }).join('');
