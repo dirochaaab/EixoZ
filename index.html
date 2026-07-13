@@ -591,7 +591,8 @@ var SITE_CONFIG = {
   instagramUrl: '#', tiktokUrl: '#',
   whatsapp1: '', name1: 'Diogo', photo1: null,
   whatsapp2: '', name2: 'Gabi', photo2: null,
-  bannerImages: [null,null,null,null,null]
+  bannerImages: [null,null,null,null,null],
+  bannerLinks: ['','','','','']
 };
 var PRODUCTS = [];
 
@@ -703,8 +704,10 @@ function renderBanner(){
   var track = document.querySelector('#bannerCarousel .banner-track');
   var dotsWrap = document.querySelector('#bannerCarousel .banner-dots');
   track.innerHTML = SITE_CONFIG.bannerImages.map(function(src,i){
+    var link = (SITE_CONFIG.bannerLinks && SITE_CONFIG.bannerLinks[i]) || '';
+    var imgTag = '<img src="'+src+'" alt="Banner '+(i+1)+'" style="width:100%;height:100%;object-fit:contain;background:oklch(0.08 0.02 260)">';
     var inner = src
-      ? '<img src="'+src+'" alt="Banner '+(i+1)+'" style="width:100%;height:100%;object-fit:contain;background:oklch(0.08 0.02 260)">'
+      ? (link ? '<a href="'+link+'" target="_blank" rel="noopener" style="display:block;width:100%;height:100%">'+imgTag+'</a>' : imgTag)
       : '<div class="banner-placeholder"><span class="plus">+</span><p>Banner '+(i+1)+'</p><small>Disponível apenas para a equipe</small></div>';
     return '<div class="banner-slide'+(i===0?' active':'')+'">'+inner+'</div>';
   }).join('');
@@ -932,6 +935,7 @@ async function loadSiteData(){
         photo2: data.photo2 != null ? data.photo2 : (data.photoGabi || SITE_CONFIG.photo2)
       });
       if(Array.isArray(data.bannerImages) && data.bannerImages.length) SITE_CONFIG.bannerImages = data.bannerImages;
+      if(Array.isArray(data.bannerLinks) && data.bannerLinks.length) SITE_CONFIG.bannerLinks = data.bannerLinks;
     }
   } catch(e){ console.warn('Config indisponível, usando padrão.', e); }
 
@@ -1419,9 +1423,15 @@ function renderProductForm(editProduct){
 
 function renderBannerForm(){
   var bannerHtml = SITE_CONFIG.bannerImages.map(function(src,i){
-    return '<div class="field"><label>Imagem '+(i+1)+'</label>' +
+    var linkVal = (SITE_CONFIG.bannerLinks && SITE_CONFIG.bannerLinks[i]) || '';
+    return '<div class="field" style="border:1px solid var(--border);border-radius:8px;padding:12px;">' +
+      '<label>Imagem '+(i+1)+'</label>' +
       (src ? '<img class="admin-thumb" src="'+src+'" alt="">' : '') +
-      '<input type="file" accept="image/*" class="banner-file" data-i="'+i+'"></div>';
+      '<input type="file" accept="image/*" class="banner-file" data-i="'+i+'">' +
+      (src ? '<label class="checkbox-label" style="margin-top:6px;"><input type="checkbox" class="banner-remove" data-i="'+i+'"> Remover esta imagem</label>' : '') +
+      '<label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted-foreground);margin:10px 0 6px;">Link ao clicar (opcional)</label>' +
+      '<input type="text" class="banner-link" data-i="'+i+'" placeholder="https://..." value="'+linkVal.replace(/"/g,'&quot;')+'">' +
+      '</div>';
   }).join('');
 
   modalBody.innerHTML =
@@ -1443,19 +1453,27 @@ function renderBannerForm(){
     btn.disabled = true; btn.textContent = 'Enviando...';
     try {
       var newImages = SITE_CONFIG.bannerImages.slice();
+      var removeChecks = modalBody.querySelectorAll('.banner-remove');
       for(var j=0;j<fileInputs.length;j++){
         var inp = fileInputs[j];
         var f = inp.files[0];
-        if(!f) continue;
         var idx = parseInt(inp.getAttribute('data-i'),10);
-        newImages[idx] = await compressImage(f, 640, 0.65);
+        var removed = false;
+        removeChecks.forEach(function(cb){ if(parseInt(cb.getAttribute('data-i'),10) === idx && cb.checked) removed = true; });
+        if(f) newImages[idx] = await compressImage(f, 640, 0.65);
+        else if(removed) newImages[idx] = null;
       }
+      var newLinks = (SITE_CONFIG.bannerLinks || ['','','','','']).slice();
+      modalBody.querySelectorAll('.banner-link').forEach(function(inp){
+        var idx2 = parseInt(inp.getAttribute('data-i'),10);
+        newLinks[idx2] = inp.value.trim();
+      });
       if(JSON.stringify(newImages).length > DOC_SAFE_LIMIT){
         errEl.textContent = 'Fotos grandes demais mesmo comprimidas — troque menos imagens por vez.';
         btn.disabled = false; btn.textContent = 'Salvar banner';
         return;
       }
-      await setDoc(doc(db,'config','site'), { bannerImages: newImages }, { merge: true });
+      await setDoc(doc(db,'config','site'), { bannerImages: newImages, bannerLinks: newLinks }, { merge: true });
       await loadSiteData();
       renderBannerForm();
     } catch(e){
