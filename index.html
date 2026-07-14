@@ -574,7 +574,7 @@ import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc
+  getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, updateDoc, deleteDoc, increment
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 var firebaseConfig = {
@@ -1045,6 +1045,10 @@ function renderAdminHome(){
   modalBody.innerHTML =
     '<h2>Painel Eixo Z</h2>' +
     '<p style="color:var(--muted-foreground);font-size:12px;margin:-10px 0 18px;">'+(auth.currentUser ? auth.currentUser.email : '')+'</p>' +
+    '<div id="visitsBox" style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;">' +
+      '<span style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted-foreground);">Acessos totais ao site</span>' +
+      '<span id="visitsCount" style="font-family:\'Orbitron\';font-size:20px;font-weight:800;color:var(--primary);">...</span>' +
+    '</div>' +
     '<button class="btn btn-primary" type="button" id="goProducts" style="width:100%;margin-bottom:12px;">Adicionar Produtos</button>' +
     '<button class="btn btn-primary" type="button" id="goBanner" style="width:100%;margin-bottom:12px;">Adicionar fotos aos banners</button>' +
     '<button class="btn btn-primary" type="button" id="goInfo" style="width:100%;margin-bottom:24px;">Alterar informações</button>' +
@@ -1057,6 +1061,10 @@ function renderAdminHome(){
   document.getElementById('goProducts').addEventListener('click', function(){ renderProductForm(); });
   document.getElementById('goBanner').addEventListener('click', renderBannerForm);
   document.getElementById('goInfo').addEventListener('click', renderInfoForm);
+  getTotalVisits().then(function(total){
+    var el = document.getElementById('visitsCount');
+    if(el) el.textContent = total != null ? total : '—';
+  });
 }
 
 var SITE_CATEGORIES = ['Chaveiros', 'RPG & Games', 'Colecionáveis', 'Vestuário', 'Personalizáveis', 'Decoração'];
@@ -1803,11 +1811,29 @@ document.addEventListener('click', function(e){
   }
 });
 
+var visitTracked = false;
 onAuthStateChanged(auth, function(user){
+  if(!visitTracked){
+    visitTracked = true;
+    if(!user) trackVisit();
+  }
   if(!modalOverlay.hidden){
     if(user) renderAdminHome(); else renderLoginForm();
   }
 });
+
+function trackVisit(){
+  try {
+    setDoc(doc(db,'config','stats'), { totalVisits: increment(1) }, { merge: true }).catch(function(){});
+  } catch(e){}
+}
+async function getTotalVisits(){
+  try {
+    var snap = await getDoc(doc(db,'config','stats'));
+    if(snap.exists()) return snap.data().totalVisits || 0;
+  } catch(e){}
+  return null;
+}
 
 function handleDeepLinkProduct(){
   var params = new URLSearchParams(window.location.search);
